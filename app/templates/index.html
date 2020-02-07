@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Title</title>
+
+  <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js" integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I=" crossorigin="anonymous"></script>
+  <script src="https://code.jquery.com/jquery-3.4.1.js" integrity="sha256-WpOohJOqMqqyKL9FccASB9O0KwACQJpFTUBLTYOVvVU=" crossorigin="anonymous"></script>
+
+</head>
+<body>
+
+<form method="post">
+  <h2> Test Chat </h2>
+  <h4> message </h4>
+  <input type="text" name="message">
+  <input type="submit" value="send">
+</form>
+
+<h2> Response </h2>
+<p>
+  ...
+</p>
+
+<script type="text/javascript" charset="utf-8">
+  var socket = io("http://192.168.0.113:5000/");
+  socket.on('connect', function() {
+    socket.emit('say hi', {data: 'I\'m connected!'});
+  });
+
+
+</script>
+
+</body>
+</html>
