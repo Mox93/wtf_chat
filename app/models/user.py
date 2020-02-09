@@ -3,8 +3,11 @@ from flask_mongoengine import Document
 
 
 class PendingMsg(db.EmbeddedDocument):
-    _id = db.StringField(required=True)
+    # _id = db.StringField(required=True)
+    sender = db.ReferenceField("User", required=True)
+    chat_id = db.ObjectIdField(required=True)
     msg = db.StringField(required=True)
+    time_stamp = db.DateTimeField(required=True)
 
 
 class User(Document):
@@ -13,7 +16,9 @@ class User(Document):
     email = db.EmailField(required=True, unique=True)
     password = db.StringField(required=True)
     user_name = db.StringField()
+    contacts = db.ListField(db.ReferenceField("self", reverse_delete_rule=1))
     pending_msgs = db.EmbeddedDocumentListField(PendingMsg)
+    sid = db.StringField()
 
     @classmethod
     def find_by_email(cls, email):

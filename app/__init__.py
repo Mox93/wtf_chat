@@ -39,3 +39,11 @@ from flask_socketio import SocketIO
 socket_IO = SocketIO(app)
 
 from app.api.chat import *
+
+
+# Testing
+from flask import render_template
+
+@app.route("/", methods=["GET", "POST"])
+def test():
+    return render_template("index.html")
