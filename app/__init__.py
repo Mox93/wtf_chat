@@ -38,7 +38,7 @@ from flask_socketio import SocketIO
 
 socket_IO = SocketIO(app)
 
-from app.api.chat import *
+from app.api.chat_ import *
 
 
 # Testing

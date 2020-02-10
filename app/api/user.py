@@ -21,7 +21,7 @@ def enter():
         else:
             response = {"error": "wrong password."}
     else:
-        user = User(**data)
+        user = User(email=data["email"])
         user.password = generate_password_hash(data['password'], method="sha256")
 
         user.save()
@@ -85,7 +85,7 @@ def contacts():
 
     user = User.find_by_email(current_user["email"])
     if user:
-        contacts = [c.fetch() for c in user.contacts]
+        contacts = [c for c in user.contacts]
         response = {"data": {"contacts": [{"user_name": u.user_name, "email": u.email} for u in contacts]}}
     else:
         response = {"error": "couldn't find user."}
