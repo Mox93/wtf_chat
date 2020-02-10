@@ -1,17 +1,24 @@
+# Config
+import json
+
+with open("config.json", "r") as config:
+    config = json.load(config)
+
+
 # App
 from flask import Flask
 
 app = Flask(__name__)
 app.config["HOST"] = "localhost"
-app.config["PORT"] = 5000
+app.config["PORT"] = config["port"]
 app.config["DEBUG"] = True
 
 
 # JWT
 from flask_jwt_extended import JWTManager
-import secrets
+# import secrets
 
-app.config["JWT_SECRET_KEY"] = secrets.token_urlsafe(32)
+app.config["JWT_SECRET_KEY"] = config["secret"]
 app.config["JWT_BLACKLIST_ENABLED"] = True
 app.config["JWT_BLACKLIST_TOKEN_CHECKS"] = ["access", "refresh"]
 jwt = JWTManager(app)
@@ -44,6 +51,7 @@ from app.api.chat_ import *
 # Testing
 from flask import render_template
 
+
 @app.route("/", methods=["GET", "POST"])
 def test():
-    return render_template("index.html")
+    return render_template("index.html", host=f"http://{config['host']}:{config['port']}/")

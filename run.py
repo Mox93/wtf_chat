@@ -1,5 +1,6 @@
-from app import app, socket_IO
+from app import app, socket_IO, config
+import json
 
 
 if __name__ == "__main__":
-    socket_IO.run(app)  # , host="192.168.0.113")
+    socket_IO.run(app, host=config["host"])

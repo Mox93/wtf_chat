@@ -23,7 +23,7 @@
 <p id="messages"></p>
 
 <script type="text/javascript" charset="utf-8">
-  var socket = io("http://127.0.0.1:5000/");  // "http://192.168.0.113:5000/"
+  var socket = io("{{ host }}");
 
   socket.on('connect', function() {
     socket.send('I\'m connected!', function(msg) {
