@@ -6,6 +6,7 @@ from datetime import datetime
 from app.models.user import User
 from app.models.chat import Chat
 
+
 @socket_IO.on("message")
 def message(msg):
     print(f"sid = {request.sid}")
@@ -24,7 +25,8 @@ def initialization():
 @socket_IO.on("send message")
 def send_message(msg):
     time_stamp = datetime.utcnow()
-    emit("send message", f"{msg.get('from')}: {msg.get('body')} <{time_stamp}>", broadcast=True)
+    print(f"{msg.get('from')}: {msg.get('body')} <{time_stamp}>")
+    emit("new message", f"{msg.get('from')}: {msg.get('body')} <{time_stamp}>", broadcast=True)
 
 
 @socket_IO.on("confirm")

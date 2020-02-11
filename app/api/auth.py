@@ -26,7 +26,7 @@ def user_identity_lookup(user):
 
 
 def create_tokens(user, remember_me=False):
-    access_token = create_access_token(identity=user, expires_delta=timedelta(minutes=10), fresh=False)  # 10
+    access_token = create_access_token(identity=user, expires_delta=timedelta(days=30), fresh=False)  # minutes=10
     if remember_me:
         refresh_token = create_refresh_token(identity=user, expires_delta=timedelta(days=365))
     else:
@@ -42,5 +42,5 @@ def create_fresh_token(user):
 
 def refresh_access_token(user):
     print("Refreshing...")
-    new_token = create_access_token(identity=user, expires_delta=timedelta(minutes=10), fresh=False)  # 10
+    new_token = create_access_token(identity=user, expires_delta=timedelta(days=30), fresh=False)  # minutes=10
     return dict(access=new_token)

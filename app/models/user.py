@@ -1,9 +1,10 @@
 from . import db
+from bson import ObjectId
 from flask_mongoengine import Document
 
 
 class PendingMsg(db.EmbeddedDocument):
-    # _id = db.StringField(required=True)
+    _id = db.ObjectIdField(required=True)
     sender = db.ReferenceField("User", required=True)
     chat_id = db.ObjectIdField(required=True)
     msg = db.StringField(required=True)

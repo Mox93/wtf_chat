@@ -45,7 +45,7 @@ from flask_socketio import SocketIO
 
 socket_IO = SocketIO(app)
 
-from app.api.chat_ import *
+from app.api.chat_events import *
 
 
 # Testing

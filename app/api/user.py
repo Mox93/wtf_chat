@@ -31,6 +31,7 @@ def enter():
             }
         }
 
+    print(response)
     return jsonify(response)
 
 
@@ -54,6 +55,7 @@ def user_name():
     else:
         response = {"error": "couldn't find user."}
 
+    print(response)
     return jsonify(response)
 
 
@@ -75,6 +77,7 @@ def refresh():
     else:
         response = {"error": "couldn't find user."}
 
+    print(response)
     return jsonify(response)
 
 
@@ -85,11 +88,13 @@ def contacts():
 
     user = User.find_by_email(current_user["email"])
     if user:
-        contacts = [c for c in user.contacts]
-        response = {"data": {"contacts": [{"user_name": u.user_name, "email": u.email} for u in contacts]}}
+        response = {"data": {
+            "contacts": [{"user_name": u.user_name, "email": u.email} for u in user.contacts]
+        }}
     else:
         response = {"error": "couldn't find user."}
 
+    print(response)
     return jsonify(response)
 
 
@@ -110,12 +115,13 @@ def add_contact():
             else:
                 user.contacts.append(new_contact)
                 user.save()
-                response = {"data": {"ok": True}}
+                response = {"data": {"email": new_contact.email, "user_name": new_contact.user_name}}
         else:
             response = {"error": "couldn't find contact."}
     else:
         response = {"error": "couldn't find user."}
 
+    print(response)
     return jsonify(response)
 
 
@@ -140,4 +146,5 @@ def remove_contact():
     else:
         response = {"error": "couldn't find user."}
 
+    print(response)
     return jsonify(response)

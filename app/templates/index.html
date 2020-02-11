@@ -38,7 +38,7 @@
     });
   });
 
-  socket.on('send message', function(msg) {
+  socket.on('new message', function(msg) {
     $('#messages').append('</br>');
     $('#messages').append(msg);
     $('#messages').append('</br>');
