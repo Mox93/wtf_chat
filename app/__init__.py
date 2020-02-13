@@ -14,6 +14,12 @@ app.config["PORT"] = config["port"]
 app.config["DEBUG"] = True
 
 
+# CORS
+from flask_cors import CORS
+
+CORS(app)
+
+
 # JWT
 from flask_jwt_extended import JWTManager
 # import secrets

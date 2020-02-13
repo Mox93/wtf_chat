@@ -1,6 +1,6 @@
 from . import db
-from bson import ObjectId
 from flask_mongoengine import Document
+
 
 
 class PendingMsg(db.EmbeddedDocument):
@@ -17,7 +17,7 @@ class User(Document):
     email = db.EmailField(required=True, unique=True)
     password = db.StringField(required=True)
     user_name = db.StringField()
-    contacts = db.ListField(db.ReferenceField("self", reverse_delete_rule=1))
+    contacts = db.ListField(db.ReferenceField("self", reverse_delete_rule=4))
     pending_msgs = db.EmbeddedDocumentListField(PendingMsg)
     sid = db.StringField()
 
