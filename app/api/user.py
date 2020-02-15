@@ -61,7 +61,7 @@ def user_name():
 
 @api.route("/exit", methods=["POST"])
 @jwt_refresh_token_required
-def exit():
+def exit_():
     jti = get_raw_jwt()['jti']
     blacklist.add(jti)
 
