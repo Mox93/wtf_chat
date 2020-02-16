@@ -61,8 +61,9 @@ def new_chat():
                     chat = PersonalChat(user_1=creator, user_2=recipient)
                     chat.save()
 
-                response = {"data": {"chat_id": str(chat.id),
-                                     "recipient": {"email": recipient.email, "user_name": recipient.user_name}}}
+                response = {"data": {
+                    "chat_id": str(chat.id), "recipient": {"email": recipient.email, "user_name": recipient.user_name}
+                }}
             else:
                 response = {"error": "couldn't find the user you're trying to add."}
 
@@ -73,11 +74,10 @@ def new_chat():
                 members.append(creator)
                 chat = GroupChat(members=members)
                 chat.save()
-                response = {
-                    "data": {"chat_id": str(chat.id),
-                             "members": [{
-                                 "email": member.email,
-                                 "user_name": member.user_name} for member in chat.members]}}
+                response = {"data": {
+                    "chat_id": str(chat.id),
+                    "members": [{"email": member.email, "user_name": member.user_name} for member in chat.members]
+                }}
             else:
                 response = {"error": "couldn't find any of the users you're trying to add."}
         else:
@@ -93,24 +93,30 @@ def new_chat():
 @jwt_required
 def send_message():
     data = request.get_json()
-    sender = get_jwt_identity()
+    current_user = get_jwt_identity()
     time_stamp = datetime.utcnow()
+
+    sender = User.find_by_email(current_user["email"])
     chat = Chat.find_by_id(data.get("chat_id"))
     if chat:
-        recipients = chat.get_users()
-        if sender in recipients:
+        if sender in chat.members:
             pending_msg = PendingMsg(_id=ObjectId(), sender=sender, chat_id=chat.id,
-                                     msg=data["msg"], time_stamp=time_stamp)
+                                     body=data["body"], time_stamp=time_stamp)
             response = {"data": {
-                "id": str(pending_msg._id), "from": sender, "chat_id": str(chat.id),
-                "msg": data["msg"], "time_stamp": time_stamp
+                "_id": str(pending_msg._id), "sender": {"email": sender.email, "user_name": sender.user_name},
+                "chat_id": str(chat.id), "body": data["body"], "time_stamp": int(time_stamp.timestamp())
             }}
-            print(response)
-            for user in recipients:
+            for user in chat.members:
                 user.pending_msgs.append(pending_msg)
                 user.save()
+                # TODO emit("new message", response, room=user.sid)
+        else:
+            response = {"error": "you aren't a part of this chat."}
+    else:
+        response = {"error": "couldn't find the chat you're trying to send to."}
 
-                emit("new message", response, room=user.sid)
+    print(response)
+    return response
 
 
 @api.route("/confirm-receive", methods=["POST"])
