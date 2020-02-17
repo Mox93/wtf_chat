@@ -6,6 +6,7 @@ from . import api, request
 from app.models.chat import Chat, PersonalChat, GroupChat
 from app.models.user import User, PendingMsg
 from bson import ObjectId
+import time
 
 
 @api.route("/chats", methods=["GET"])
@@ -92,6 +93,8 @@ def new_chat():
 @api.route("/send-message", methods=["POST"])
 @jwt_required
 def send_message():
+    time.sleep(1)
+
     data = request.get_json()
     current_user = get_jwt_identity()
     time_stamp = datetime.utcnow()

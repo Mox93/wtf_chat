@@ -1,56 +1,13 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Chat</title>
+  <meta charset="utf-8">
+  <title>Conduit</title>
 
-  <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js" integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I=" crossorigin="anonymous"></script>
-  <script src="https://code.jquery.com/jquery-3.4.1.js" integrity="sha256-WpOohJOqMqqyKL9FccASB9O0KwACQJpFTUBLTYOVvVU=" crossorigin="anonymous"></script>
-
+  <link rel="shortcut icon" type="image/ico" href="{{ url_for('static', filename='assets/favicon.ico') }}">
+  <script src="{{ url_for('static', filename='js/elm.js') }}"></script>
 </head>
 <body>
-
-<form method="post">
-  <h2> Test Chat </h2>
-  <h4> user name </h4>
-  <input id="user-name" type="text">
-  <h4> message </h4>
-  <input id="message-text" type="text">
-  <input id="send-message" type="button" value="send">
-</form>
-
-<h2> Response </h2>
-<p id="messages"></p>
-
-<script type="text/javascript" charset="utf-8">
-  var socket = io("{{ host }}");
-
-  socket.on('connect', function() {
-    socket.send('I\'m connected!', function(msg) {
-      console.log(">>> " + msg);
-    });
-  });
-
-  $('#send-message').on('click', function() {
-    socket.emit( 'send message', {'from' : $('#user-name').val(), 'body' : $('#message-text').val()});
-    socket.emit('test', 'something', function(msg) {
-      console.log(msg);
-    });
-  });
-
-  socket.on('new message', function(msg) {
-    $('#messages').append('</br>');
-    $('#messages').append(msg);
-    $('#messages').append('</br>');
-    $('#messages').append('================================');
-  });
-
-  /*
-  socket.on('test', function(msg) {
-    console.log(msg);
-  });
-  */
-</script>
-
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>
