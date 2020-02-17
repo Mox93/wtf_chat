@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, send_file, url_for, request, redirect
 import os
+from config import HOST, PORT, NAMESPACE
 
 
 web = Blueprint("web", __name__)
@@ -17,7 +18,7 @@ def avatar(file_name):
     try:
         return send_file(file_path)
     except Exception as e:
-        print(str(e))
+        print(f"!!! Error: {str(e)}")
         return send_file(os.path.join(os.path.dirname(file_path), "default.svg"))
 
 
@@ -29,7 +30,7 @@ def assets(file_name):
 
 @web.route("/", methods=["GET"])
 def root():
-    return render_template("index.html")
+    return render_template("index.html", url=f"http://{HOST}:{PORT}/", namespace=NAMESPACE)
 
 
 @web.route("/<path:url>", methods=["GET"])

@@ -1,4 +1,5 @@
-from app import app, socket_IO, HOST
+from app import app, socket_IO
+from config import HOST
 
 
 if __name__ == "__main__":

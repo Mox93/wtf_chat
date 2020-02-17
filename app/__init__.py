@@ -1,28 +1,6 @@
-# Config
-import json
-
-err_msg = """==================================================
-Please create a "config.json" file in the project's root directory with the following fields:
-    - host : <str: i.e. "0.0.0.0">
-    - port : <int: i.e. 5000>
-    - secret : <str: i.e. "a random value" >
-Once you've done that press Enter to continue."""
-
-while True:
-    try:
-        with open("config.json", "r") as config:
-            config = json.load(config)
-        HOST = config["host"]
-        SECRET = config["secret"]
-        PORT = config["port"]
-        break
-
-    except (FileNotFoundError, KeyError):
-        input(err_msg)
-
-
 # App
 from flask import Flask
+from config import PORT
 
 app = Flask(__name__)
 app.config["HOST"] = "localhost"
@@ -38,6 +16,7 @@ CORS(app)
 
 # JWT
 from flask_jwt_extended import JWTManager
+from config import SECRET
 # import secrets
 
 app.config["JWT_SECRET_KEY"] = SECRET
@@ -56,21 +35,28 @@ app.config["MONGODB_HOST"] = DB_HOST
 db.init_app(app)
 
 
-# API
-from app.api import api
-
-app.register_blueprint(api, url_prefix="/api")
-
-
 # SocketIO
+from config import NAMESPACE
+from flask import request
 from flask_socketio import SocketIO
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from app.models.user import User
 
 socket_IO = SocketIO(app)
 
-from app.api.chat_events import *
+
+@socket_IO.on("init", namespace=NAMESPACE)
+@jwt_required
+def init():
+    current_user = get_jwt_identity()
+    user = User.find_by_email(current_user["email"])
+    user.sid = request.sid
+    user.save()
 
 
-# Web
+# Blueprints
+from app.api import api
 from app.web import web
 
+app.register_blueprint(api, url_prefix="/api")
 app.register_blueprint(web)

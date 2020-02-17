@@ -2,7 +2,6 @@ from . import db
 from flask_mongoengine import Document
 
 
-
 class PendingMsg(db.EmbeddedDocument):
     _id = db.ObjectIdField(required=True)
     sender = db.ReferenceField("User", required=True)
