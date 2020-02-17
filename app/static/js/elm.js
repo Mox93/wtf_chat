@@ -11735,6 +11735,31 @@ var $author$project$Chat$confirmMessage = function (config) {
 			A2($elm$core$List$map, updateChatMsg, val3));
 	}
 };
+var $author$project$Chat$changeText = F2(
+	function (chat, text) {
+		if (chat.$ === 'PersonalChat') {
+			var body = chat.a;
+			return $author$project$Chat$PersonalChat(
+				_Utils_update(
+					body,
+					{pendingMsg: text}));
+		} else {
+			var body = chat.a;
+			return $author$project$Chat$GroupChat(
+				_Utils_update(
+					body,
+					{pendingMsg: text}));
+		}
+	});
+var $author$project$Chat$pendingMsg = function (chat) {
+	if (chat.$ === 'PersonalChat') {
+		var body = chat.a;
+		return body.pendingMsg;
+	} else {
+		var body = chat.a;
+		return body.pendingMsg;
+	}
+};
 var $author$project$Message$Pending = function (a) {
 	return {$: 'Pending', a: a};
 };
@@ -11751,15 +11776,6 @@ var $author$project$Message$fromString = F2(
 				timeStamp: $elm$time$Time$millisToPosix(0)
 			});
 	});
-var $author$project$Chat$pendingMsg = function (chat) {
-	if (chat.$ === 'PersonalChat') {
-		var body = chat.a;
-		return body.pendingMsg;
-	} else {
-		var body = chat.a;
-		return body.pendingMsg;
-	}
-};
 var $author$project$Chat$relocateMsg = F2(
 	function (chat, sender) {
 		var msg = A2(
@@ -11791,7 +11807,8 @@ var $author$project$Chat$relocateMsg = F2(
 				msg);
 		}
 	});
-var $author$project$Chat$moverToBody = F2(
+var $elm$core$String$trim = _String_trim;
+var $author$project$Chat$moveToBody = F2(
 	function (chats, sender) {
 		if (chats.$ === 'Idle') {
 			return _Utils_Tuple2(chats, $elm$core$Maybe$Nothing);
@@ -11799,50 +11816,26 @@ var $author$project$Chat$moverToBody = F2(
 			var val1 = chats.a;
 			var val2 = chats.b;
 			var val3 = chats.c;
-			var _v1 = A2($author$project$Chat$relocateMsg, val2, sender);
-			var chat = _v1.a;
-			var msg = _v1.b;
-			return _Utils_Tuple2(
-				A3($author$project$Chat$Active, val1, chat, val3),
-				$elm$core$Maybe$Just(
-					_Utils_Tuple2(
-						msg,
-						$author$project$Chat$id(chat))));
+			var trimmedMsg = $elm$core$String$trim(
+				$author$project$Chat$pendingMsg(val2));
+			if (trimmedMsg === '') {
+				return _Utils_Tuple2(chats, $elm$core$Maybe$Nothing);
+			} else {
+				var _v1 = A2(
+					$author$project$Chat$relocateMsg,
+					A2($author$project$Chat$changeText, val2, trimmedMsg),
+					sender);
+				var chat = _v1.a;
+				var msg = _v1.b;
+				return _Utils_Tuple2(
+					A3($author$project$Chat$Active, val1, chat, val3),
+					$elm$core$Maybe$Just(
+						_Utils_Tuple2(
+							msg,
+							$author$project$Chat$id(chat))));
+			}
 		}
 	});
-var $author$project$Chat$changeText = F2(
-	function (chat, text) {
-		if (chat.$ === 'PersonalChat') {
-			var body = chat.a;
-			return $author$project$Chat$PersonalChat(
-				_Utils_update(
-					body,
-					{pendingMsg: text}));
-		} else {
-			var body = chat.a;
-			return $author$project$Chat$GroupChat(
-				_Utils_update(
-					body,
-					{pendingMsg: text}));
-		}
-	});
-var $author$project$Chat$newLine = function (chats) {
-	if (chats.$ === 'Idle') {
-		return chats;
-	} else {
-		var val1 = chats.a;
-		var val2 = chats.b;
-		var val3 = chats.c;
-		return A3(
-			$author$project$Chat$Active,
-			val1,
-			A2(
-				$author$project$Chat$changeText,
-				val2,
-				$author$project$Chat$pendingMsg(val2) + '\n'),
-			val3);
-	}
-};
 var $elm$core$List$filter = F2(
 	function (isGood, list) {
 		return A3(
@@ -12258,17 +12251,11 @@ var $author$project$Viewer$user = function (_v0) {
 var $author$project$ChatRoom$update = F2(
 	function (msg, model) {
 		switch (msg.$) {
-			case 'NewLine':
-				return _Utils_Tuple2(
-					_Utils_update(
-						model,
-						{
-							chats: $author$project$Chat$newLine(model.chats)
-						}),
-					$elm$core$Platform$Cmd$none);
+			case 'NoOp':
+				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 			case 'SendMessage':
 				var _v1 = A2(
-					$author$project$Chat$moverToBody,
+					$author$project$Chat$moveToBody,
 					model.chats,
 					$author$project$Viewer$user(model.viewer));
 				var chats = _v1.a;
@@ -12283,12 +12270,12 @@ var $author$project$ChatRoom$update = F2(
 						} else {
 							var _v3 = maybePair.a;
 							var message = _v3.a;
-							var chat = _v3.b;
+							var chat_id = _v3.b;
 							return A3(
 								$author$project$ChatRoom$sendMessage,
 								$author$project$Viewer$cred(model.viewer),
 								message,
-								chat);
+								chat_id);
 						}
 					}());
 			case 'SelectChat':
@@ -18479,6 +18466,7 @@ var $mdgriffith$elm_ui$Element$Font$size = function (i) {
 		$mdgriffith$elm_ui$Internal$Flag$fontSize,
 		$mdgriffith$elm_ui$Internal$Model$FontSize(i));
 };
+var $mdgriffith$elm_ui$Element$htmlAttribute = $mdgriffith$elm_ui$Internal$Model$Attr;
 var $mdgriffith$elm_ui$Internal$Model$Describe = function (a) {
 	return {$: 'Describe', a: a};
 };
@@ -18513,7 +18501,13 @@ var $author$project$Message$viewText = function (msg) {
 			function (m) {
 				return A2(
 					$mdgriffith$elm_ui$Element$paragraph,
-					_List_Nil,
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+							$mdgriffith$elm_ui$Element$spacing(4),
+							$mdgriffith$elm_ui$Element$htmlAttribute(
+							A2($elm$html$Html$Attributes$style, 'overflow-wrap', 'break-word'))
+						]),
 					_List_fromArray(
 						[
 							$mdgriffith$elm_ui$Element$text(m)
@@ -18524,15 +18518,14 @@ var $author$project$Message$viewText = function (msg) {
 var $author$project$Message$view = F2(
 	function (msg, from) {
 		return A2(
-			$mdgriffith$elm_ui$Element$column,
+			$mdgriffith$elm_ui$Element$el,
 			_List_fromArray(
 				[
 					$mdgriffith$elm_ui$Element$width(
 					A2($mdgriffith$elm_ui$Element$maximum, 640, $mdgriffith$elm_ui$Element$shrink)),
 					$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$shrink),
 					$mdgriffith$elm_ui$Element$alignBottom,
-					$mdgriffith$elm_ui$Element$padding(8),
-					$mdgriffith$elm_ui$Element$spacing(8),
+					$mdgriffith$elm_ui$Element$padding(12),
 					$mdgriffith$elm_ui$Element$Background$color(
 					A3($mdgriffith$elm_ui$Element$rgb255, 209, 220, 231)),
 					$mdgriffith$elm_ui$Element$Border$rounded(8),
@@ -18550,11 +18543,8 @@ var $author$project$Message$view = F2(
 					}
 				}()
 				]),
-			_List_fromArray(
-				[
-					$author$project$Message$viewText(
-					$author$project$Message$body(msg))
-				]));
+			$author$project$Message$viewText(
+				$author$project$Message$body(msg)));
 	});
 var $author$project$ChatRoom$viewMessages = F2(
 	function (msgList, user) {
@@ -18577,7 +18567,7 @@ var $author$project$ChatRoom$viewMessages = F2(
 var $author$project$ChatRoom$ChangText = function (a) {
 	return {$: 'ChangText', a: a};
 };
-var $author$project$ChatRoom$NewLine = {$: 'NewLine'};
+var $author$project$ChatRoom$NoOp = {$: 'NoOp'};
 var $author$project$ChatRoom$SendMessage = {$: 'SendMessage'};
 var $mdgriffith$elm_ui$Internal$Model$Focus = {$: 'Focus'};
 var $mdgriffith$elm_ui$Internal$Model$PseudoSelector = F2(
@@ -18682,7 +18672,6 @@ var $mdgriffith$elm_ui$Element$focused = function (decs) {
 			$mdgriffith$elm_ui$Internal$Model$Focus,
 			$mdgriffith$elm_ui$Internal$Model$unwrapDecorations(decs)));
 };
-var $mdgriffith$elm_ui$Element$htmlAttribute = $mdgriffith$elm_ui$Internal$Model$Attr;
 var $mdgriffith$elm_ui$Element$Input$HiddenLabel = function (a) {
 	return {$: 'HiddenLabel', a: a};
 };
@@ -19531,6 +19520,7 @@ var $mdgriffith$elm_ui$Element$Input$multiline = F2(
 			attrs,
 			{label: multi.label, onChange: multi.onChange, placeholder: multi.placeholder, text: multi.text});
 	});
+var $elm$json$Json$Decode$bool = _Json_decodeBool;
 var $elm$json$Json$Decode$fail = _Json_fail;
 var $elm$html$Html$Events$keyCode = A2($elm$json$Json$Decode$field, 'keyCode', $elm$json$Json$Decode$int);
 var $elm$virtual_dom$VirtualDom$MayPreventDefault = function (a) {
@@ -19543,48 +19533,30 @@ var $elm$html$Html$Events$preventDefaultOn = F2(
 			event,
 			$elm$virtual_dom$VirtualDom$MayPreventDefault(decoder));
 	});
-var $author$project$ChatRoom$onEnter = function (msg) {
-	return A2(
-		$elm$html$Html$Events$preventDefaultOn,
-		'keypress',
-		A2(
-			$elm$json$Json$Decode$map,
-			function (m) {
-				return _Utils_Tuple2(m, true);
-			},
+var $author$project$ChatRoom$onEnterHandler = F2(
+	function (send, noOp) {
+		return A2(
+			$elm$html$Html$Events$preventDefaultOn,
+			'keydown',
 			A2(
 				$elm$json$Json$Decode$andThen,
-				function (key) {
-					return (key === 13) ? $elm$json$Json$Decode$succeed(msg) : $elm$json$Json$Decode$fail('Not enter');
+				function (keys) {
+					return (keys.code === 13) ? (keys.shift ? $elm$json$Json$Decode$succeed(
+						_Utils_Tuple2(noOp, false)) : ((keys.ctrl || keys.alt) ? $elm$json$Json$Decode$succeed(
+						_Utils_Tuple2(noOp, true)) : $elm$json$Json$Decode$succeed(
+						_Utils_Tuple2(send, true)))) : $elm$json$Json$Decode$fail('Not Enter Key');
 				},
-				$elm$html$Html$Events$keyCode)));
-};
-var $elm$json$Json$Decode$bool = _Json_decodeBool;
-var $author$project$ChatRoom$onShiftEnter = function (msg) {
-	return A2(
-		$elm$html$Html$Events$preventDefaultOn,
-		'keydown',
-		A2(
-			$elm$json$Json$Decode$map,
-			function (m) {
-				return _Utils_Tuple2(m, true);
-			},
-			A2(
-				$elm$json$Json$Decode$andThen,
-				function (_v0) {
-					var key = _v0.a;
-					var shift = _v0.b;
-					return ((key === 13) && shift) ? $elm$json$Json$Decode$succeed(msg) : $elm$json$Json$Decode$fail('Not shift + enter');
-				},
-				A3(
-					$elm$json$Json$Decode$map2,
-					F2(
-						function (key, shift) {
-							return _Utils_Tuple2(key, shift);
+				A5(
+					$elm$json$Json$Decode$map4,
+					F4(
+						function (key, shift, ctrl, alt) {
+							return {alt: alt, code: key, ctrl: ctrl, shift: shift};
 						}),
 					$elm$html$Html$Events$keyCode,
-					A2($elm$json$Json$Decode$field, 'shiftKey', $elm$json$Json$Decode$bool)))));
-};
+					A2($elm$json$Json$Decode$field, 'shiftKey', $elm$json$Json$Decode$bool),
+					A2($elm$json$Json$Decode$field, 'ctrlKey', $elm$json$Json$Decode$bool),
+					A2($elm$json$Json$Decode$field, 'altKey', $elm$json$Json$Decode$bool))));
+	});
 var $mdgriffith$elm_ui$Element$Input$Placeholder = F2(
 	function (a, b) {
 		return {$: 'Placeholder', a: a, b: b};
@@ -19602,9 +19574,7 @@ var $author$project$ChatRoom$viewTextInput = function (msg) {
 				$mdgriffith$elm_ui$Element$Background$color(
 				A4($mdgriffith$elm_ui$Element$rgba, 0, 0, 0, 0.05)),
 				$mdgriffith$elm_ui$Element$padding(12),
-				$mdgriffith$elm_ui$Element$spacing(12),
-				$mdgriffith$elm_ui$Element$htmlAttribute(
-				$author$project$ChatRoom$onEnter($author$project$ChatRoom$SendMessage))
+				$mdgriffith$elm_ui$Element$spacing(12)
 			]),
 		_List_fromArray(
 			[
@@ -19616,8 +19586,10 @@ var $author$project$ChatRoom$viewTextInput = function (msg) {
 						$mdgriffith$elm_ui$Element$Border$width(0),
 						$mdgriffith$elm_ui$Element$focused(_List_Nil),
 						$mdgriffith$elm_ui$Element$htmlAttribute(
-						$author$project$ChatRoom$onShiftEnter($author$project$ChatRoom$NewLine)),
-						$mdgriffith$elm_ui$Element$Font$size(16)
+						A2($author$project$ChatRoom$onEnterHandler, $author$project$ChatRoom$SendMessage, $author$project$ChatRoom$NoOp)),
+						$mdgriffith$elm_ui$Element$Font$size(16),
+						$mdgriffith$elm_ui$Element$htmlAttribute(
+						A2($elm$html$Html$Attributes$style, 'overflow-wrap', 'break-word'))
 					]),
 				{
 					label: $mdgriffith$elm_ui$Element$Input$labelHidden('msg'),
@@ -20420,4 +20392,4 @@ var $author$project$Main$main = A2(
 	$author$project$Api$document,
 	$author$project$Viewer$decoder,
 	{init: $author$project$Main$init, subscriptions: $author$project$Main$subscriptions, update: $author$project$Main$update, view: $author$project$Main$view});
-_Platform_export({'Main':{'init':$author$project$Main$main($elm$json$Json$Decode$value)({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{"User.User":{"args":[],"type":"{ email : String.String, userName : Maybe.Maybe String.String }"},"Message.ConfirmedMsg":{"args":[],"type":"{ id : String.String, sender : User.User, body : String.String, timeStamp : Time.Posix }"},"Chat.GroupChatRecord":{"args":[],"type":"{ id : String.String, name : Maybe.Maybe String.String, members : List.List User.User, messages : List.List Message.Message, pendingMsg : String.String }"},"Message.PendingMsg":{"args":[],"type":"{ sender : User.User, body : String.String, timeStamp : Time.Posix }"},"Chat.PersonalChatRecord":{"args":[],"type":"{ id : String.String, recipient : User.User, messages : List.List Message.Message, pendingMsg : String.String }"}},"unions":{"Main.Msg":{"args":[],"tags":{"GotEntranceMsg":["Entrance.Msg"],"GotChatRoomMsg":["ChatRoom.Msg"],"GotViewer":["Maybe.Maybe Viewer.Viewer"]}},"Maybe.Maybe":{"args":["a"],"tags":{"Just":["a"],"Nothing":[]}},"ChatRoom.Msg":{"args":[],"tags":{"NewLine":[],"SendMessage":[],"SelectChat":["Chat.Chat"],"ChangText":["String.String"],"GotChats":["Result.Result Http.Error (List.List Chat.Chat)"],"GotMessageResponse":["Result.Result Http.Error ( String.String, Message.Message, Message.Message )"]}},"Entrance.Msg":{"args":[],"tags":{"ChangeEmail":["String.String"],"ChangePassword":["String.String"],"ToggleShowPassword":["Basics.Bool"],"ToggleRememberMe":["Basics.Bool"],"Enter":[],"GotResponse":["Result.Result Http.Error (Maybe.Maybe Viewer.Viewer)"]}},"Viewer.Viewer":{"args":[],"tags":{"Viewer":["User.User","Api.Cred"]}},"Basics.Bool":{"args":[],"tags":{"True":[],"False":[]}},"Chat.Chat":{"args":[],"tags":{"PersonalChat":["Chat.PersonalChatRecord"],"GroupChat":["Chat.GroupChatRecord"]}},"Api.Cred":{"args":[],"tags":{"Cred":["Api.RefreshToken","Api.AccessToken"]}},"Http.Error":{"args":[],"tags":{"BadUrl":["String.String"],"Timeout":[],"NetworkError":[],"BadStatus":["Basics.Int"],"BadBody":["String.String"]}},"List.List":{"args":["a"],"tags":{}},"Message.Message":{"args":[],"tags":{"Confirmed":["Message.ConfirmedMsg"],"Pending":["Message.PendingMsg"]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}},"Api.AccessToken":{"args":[],"tags":{"AccessToken":["Maybe.Maybe String.String","Basics.Int"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"Time.Posix":{"args":[],"tags":{"Posix":["Basics.Int"]}},"Api.RefreshToken":{"args":[],"tags":{"RefreshToken":["String.String","Basics.Int"]}}}}})}});}(this));
+_Platform_export({'Main':{'init':$author$project$Main$main($elm$json$Json$Decode$value)({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{"User.User":{"args":[],"type":"{ email : String.String, userName : Maybe.Maybe String.String }"},"Message.ConfirmedMsg":{"args":[],"type":"{ id : String.String, sender : User.User, body : String.String, timeStamp : Time.Posix }"},"Chat.GroupChatRecord":{"args":[],"type":"{ id : String.String, name : Maybe.Maybe String.String, members : List.List User.User, messages : List.List Message.Message, pendingMsg : String.String }"},"Message.PendingMsg":{"args":[],"type":"{ sender : User.User, body : String.String, timeStamp : Time.Posix }"},"Chat.PersonalChatRecord":{"args":[],"type":"{ id : String.String, recipient : User.User, messages : List.List Message.Message, pendingMsg : String.String }"}},"unions":{"Main.Msg":{"args":[],"tags":{"GotEntranceMsg":["Entrance.Msg"],"GotChatRoomMsg":["ChatRoom.Msg"],"GotViewer":["Maybe.Maybe Viewer.Viewer"]}},"Maybe.Maybe":{"args":["a"],"tags":{"Just":["a"],"Nothing":[]}},"ChatRoom.Msg":{"args":[],"tags":{"NoOp":[],"SendMessage":[],"SelectChat":["Chat.Chat"],"ChangText":["String.String"],"GotChats":["Result.Result Http.Error (List.List Chat.Chat)"],"GotMessageResponse":["Result.Result Http.Error ( String.String, Message.Message, Message.Message )"]}},"Entrance.Msg":{"args":[],"tags":{"ChangeEmail":["String.String"],"ChangePassword":["String.String"],"ToggleShowPassword":["Basics.Bool"],"ToggleRememberMe":["Basics.Bool"],"Enter":[],"GotResponse":["Result.Result Http.Error (Maybe.Maybe Viewer.Viewer)"]}},"Viewer.Viewer":{"args":[],"tags":{"Viewer":["User.User","Api.Cred"]}},"Basics.Bool":{"args":[],"tags":{"True":[],"False":[]}},"Chat.Chat":{"args":[],"tags":{"PersonalChat":["Chat.PersonalChatRecord"],"GroupChat":["Chat.GroupChatRecord"]}},"Api.Cred":{"args":[],"tags":{"Cred":["Api.RefreshToken","Api.AccessToken"]}},"Http.Error":{"args":[],"tags":{"BadUrl":["String.String"],"Timeout":[],"NetworkError":[],"BadStatus":["Basics.Int"],"BadBody":["String.String"]}},"List.List":{"args":["a"],"tags":{}},"Message.Message":{"args":[],"tags":{"Confirmed":["Message.ConfirmedMsg"],"Pending":["Message.PendingMsg"]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}},"Api.AccessToken":{"args":[],"tags":{"AccessToken":["Maybe.Maybe String.String","Basics.Int"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"Time.Posix":{"args":[],"tags":{"Posix":["Basics.Int"]}},"Api.RefreshToken":{"args":[],"tags":{"RefreshToken":["String.String","Basics.Int"]}}}}})}});}(this));
