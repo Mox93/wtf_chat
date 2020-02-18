@@ -1,10 +1,43 @@
 console.log("Starting...");
 
 
-function intiSocket(ns, token) {
-    return io(ns, { transportOptions: { polling: {
+function intiSocket(token) {
+    return io(namespace, { transportOptions: { polling: {
         extraHeaders: { 'Authorization': 'Bearer ' + token }
     }}});
+};
+
+
+function startListening() {
+    socket.on('connect', function() {
+        console.log("Connecting...");
+        socket.emit('init');
+    });
+
+    socket.on('disconnect', function() {
+            console.log("Disconnecting...");
+        socket.emit('kill');
+    });
+
+    //app.ports.sendMessage.subscribe(function(message) {
+    //    socket.emit('send message', message);
+    //});
+
+    socket.on('new message', function(message) {
+        app.ports.receiveMessage.send(message);
+    });
+};
+
+
+function manageSocket() {
+    storage = JSON.parse( localStorage.getItem(storageKey) );
+
+    if (socket && socket.disconnected) {
+        socket.open();
+    } else if (!socket && storage) {
+        socket = intiSocket(storage.viewer.access);
+        startListening()
+    };
 };
 
 
@@ -16,20 +49,17 @@ var storage;
 var socket;
 
 var flags = localStorage.getItem(storageKey);
-const app = Elm.Main.init({flags: flags});
+var app = Elm.Main.init({flags: flags});
 
 app.ports.storeCache.subscribe(function(val) {
     if (val === null) {
         localStorage.removeItem(storageKey);
-        console.log("Disconnecting...");
-        socket.close();
+        if (socket && socket.connected) {
+            socket.close();
+        };
     } else {
         localStorage.setItem(storageKey, JSON.stringify(val));
-        storage = JSON.parse( localStorage.getItem(storageKey) );
-
-        if (!socket || socket.disconnected) {
-            socket = intiSocket(namespace, storage.viewer.access);
-        };
+        manageSocket();
     };
     // Report that the new session was stored successfully.
     setTimeout(function() { app.ports.onStoreChange.send(val); }, 0);
@@ -39,27 +69,12 @@ app.ports.storeCache.subscribe(function(val) {
 // Whenever localStorage changes in another tab, report it if necessary.
 window.addEventListener("storage", function(event) {
     if (event.storageArea === localStorage && event.key === storageKey) {
-        app.ports.onStoreChange.send(event.newValue);
+        var newVal = JSON.parse(event.newValue);
+        console.log("***", newVal);
+        app.ports.onStoreChange.send(newVal);
     };
 }, false);
 
 
 // SocketIO
-storage = JSON.parse( localStorage.getItem(storageKey) );
-
-if (storage) {
-    socket = intiSocket(namespace, storage.viewer.access);
-}
-
-socket.on('connect', function() {
-    console.log("Connecting...")
-    socket.emit('init');
-});
-
-//app.ports.sendMessage.subscribe(function(message) {
-//    socket.emit('send message', message);
-//});
-
-socket.on('new message', function(message) {
-    app.ports.receiveMessage.send(message);
-});
+manageSocket();

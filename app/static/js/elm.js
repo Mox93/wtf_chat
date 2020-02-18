@@ -11570,7 +11570,7 @@ var $elm$http$Http$request = function (r) {
 		$elm$http$Http$Request(
 			{allowCookiesFromOtherDomains: false, body: r.body, expect: r.expect, headers: r.headers, method: r.method, timeout: r.timeout, tracker: r.tracker, url: r.url}));
 };
-var $author$project$Api$url_root = 'http://localhost:5000/api/';
+var $author$project$Api$url_root = 'http://192.168.0.113:5000/api/';
 var $author$project$Api$get = function (request) {
 	var _v0 = request.cred;
 	var _v1 = _v0.b;
@@ -11629,31 +11629,63 @@ var $author$project$Main$init = function (maybeViewer) {
 var $author$project$Main$GotViewer = function (a) {
 	return {$: 'GotViewer', a: a};
 };
-var $elm$core$Debug$log = _Debug_log;
+var $elm$core$Platform$Sub$batch = _Platform_batch;
+var $elm$core$Platform$Sub$none = $elm$core$Platform$Sub$batch(_List_Nil);
+var $author$project$ChatRoom$GotNewMessage = function (a) {
+	return {$: 'GotNewMessage', a: a};
+};
+var $author$project$Api$receiveMessage = _Platform_incomingPort('receiveMessage', $elm$json$Json$Decode$value);
+var $author$project$Message$Confirmed = function (a) {
+	return {$: 'Confirmed', a: a};
+};
+var $author$project$Message$ConfirmedMsg = F4(
+	function (id, sender, body, timeStamp) {
+		return {body: body, id: id, sender: sender, timeStamp: timeStamp};
+	});
+var $elm$time$Time$Posix = function (a) {
+	return {$: 'Posix', a: a};
+};
+var $elm$time$Time$millisToPosix = $elm$time$Time$Posix;
+var $author$project$Message$decoder = A2(
+	$elm$json$Json$Decode$map,
+	$author$project$Message$Confirmed,
+	A5(
+		$elm$json$Json$Decode$map4,
+		$author$project$Message$ConfirmedMsg,
+		A2($elm$json$Json$Decode$field, '_id', $elm$json$Json$Decode$string),
+		A2($elm$json$Json$Decode$field, 'sender', $author$project$User$decoder),
+		A2($elm$json$Json$Decode$field, 'body', $elm$json$Json$Decode$string),
+		A2(
+			$elm$json$Json$Decode$field,
+			'time_stamp',
+			A2($elm$json$Json$Decode$map, $elm$time$Time$millisToPosix, $elm$json$Json$Decode$int))));
+var $elm$core$Tuple$pair = F2(
+	function (a, b) {
+		return _Utils_Tuple2(a, b);
+	});
+var $author$project$Message$withIdDecoder = A3(
+	$elm$json$Json$Decode$map2,
+	$elm$core$Tuple$pair,
+	A2($elm$json$Json$Decode$field, 'chat_id', $elm$json$Json$Decode$string),
+	$author$project$Message$decoder);
+var $author$project$Api$newMessage = function (toMsg) {
+	return $author$project$Api$receiveMessage(
+		function (value) {
+			return toMsg(
+				A2(
+					$elm$json$Json$Decode$decodeValue,
+					$author$project$Api$mainDecoder($author$project$Message$withIdDecoder),
+					value));
+		});
+};
+var $author$project$ChatRoom$subscriptions = $author$project$Api$newMessage($author$project$ChatRoom$GotNewMessage);
 var $author$project$Api$decodeFromChange = F2(
 	function (viewerDecoder, val) {
-		var firstAttempt = A2(
-			$elm$json$Json$Decode$decodeValue,
-			$author$project$Api$storageDecoder(viewerDecoder),
-			val);
-		if (firstAttempt.$ === 'Ok') {
-			var viewer = firstAttempt.a;
-			var _v1 = A2($elm$core$Debug$log, 'FirstAttempt', viewer);
-			return $elm$core$Maybe$Just(viewer);
-		} else {
-			var _v2 = A2(
-				$elm$core$Debug$log,
-				'SecondAttempt',
-				A2($elm$json$Json$Decode$decodeValue, $elm$json$Json$Decode$string, val));
-			return $elm$core$Result$toMaybe(
-				A2(
-					$elm$json$Json$Decode$decodeString,
-					$author$project$Api$storageDecoder(viewerDecoder),
-					A2(
-						$elm$core$Result$withDefault,
-						'',
-						A2($elm$json$Json$Decode$decodeValue, $elm$json$Json$Decode$string, val))));
-		}
+		return $elm$core$Result$toMaybe(
+			A2(
+				$elm$json$Json$Decode$decodeValue,
+				$author$project$Api$storageDecoder(viewerDecoder),
+				val));
 	});
 var $author$project$Api$onStoreChange = _Platform_incomingPort('onStoreChange', $elm$json$Json$Decode$value);
 var $author$project$Api$viewerChanges = F2(
@@ -11665,15 +11697,29 @@ var $author$project$Api$viewerChanges = F2(
 			});
 	});
 var $author$project$Main$subscriptions = function (model) {
-	return A2(
-		$author$project$Api$viewerChanges,
-		function (maybeViewer) {
-			return $author$project$Main$GotViewer(maybeViewer);
-		},
-		$author$project$Viewer$decoder);
+	return $elm$core$Platform$Sub$batch(
+		_List_fromArray(
+			[
+				A2(
+				$author$project$Api$viewerChanges,
+				function (maybeViewer) {
+					return $author$project$Main$GotViewer(maybeViewer);
+				},
+				$author$project$Viewer$decoder),
+				function () {
+				if (model.$ === 'Guest') {
+					return $elm$core$Platform$Sub$none;
+				} else {
+					return A2($elm$core$Platform$Sub$map, $author$project$Main$GotChatRoomMsg, $author$project$ChatRoom$subscriptions);
+				}
+			}()
+			]));
 };
 var $author$project$Main$GotEntranceMsg = function (a) {
 	return {$: 'GotEntranceMsg', a: a};
+};
+var $author$project$ChatRoom$GotExitResponse = function (a) {
+	return {$: 'GotExitResponse', a: a};
 };
 var $author$project$Chat$Active = F3(
 	function (a, b, c) {
@@ -11686,6 +11732,54 @@ var $author$project$Chat$id = function (chat) {
 	} else {
 		var body = chat.a;
 		return body.id;
+	}
+};
+var $author$project$Chat$addMessage = function (config) {
+	var updateChatMsg = function (chat) {
+		if (_Utils_eq(
+			config.chat_id,
+			$author$project$Chat$id(chat))) {
+			if (chat.$ === 'PersonalChat') {
+				var pChat = chat.a;
+				return $author$project$Chat$PersonalChat(
+					_Utils_update(
+						pChat,
+						{
+							messages: _Utils_ap(
+								pChat.messages,
+								_List_fromArray(
+									[config.msg]))
+						}));
+			} else {
+				var gChat = chat.a;
+				return $author$project$Chat$GroupChat(
+					_Utils_update(
+						gChat,
+						{
+							messages: _Utils_ap(
+								gChat.messages,
+								_List_fromArray(
+									[config.msg]))
+						}));
+			}
+		} else {
+			return chat;
+		}
+	};
+	var _v0 = config.chats;
+	if (_v0.$ === 'Idle') {
+		var chatList = _v0.a;
+		return $author$project$Chat$Idle(
+			A2($elm$core$List$map, updateChatMsg, chatList));
+	} else {
+		var val1 = _v0.a;
+		var val2 = _v0.b;
+		var val3 = _v0.c;
+		return A3(
+			$author$project$Chat$Active,
+			A2($elm$core$List$map, updateChatMsg, val1),
+			updateChatMsg(val2),
+			A2($elm$core$List$map, updateChatMsg, val3));
 	}
 };
 var $author$project$Message$replace = F3(
@@ -11735,6 +11829,46 @@ var $author$project$Chat$confirmMessage = function (config) {
 			A2($elm$core$List$map, updateChatMsg, val3));
 	}
 };
+var $elm$core$Maybe$destruct = F3(
+	function (_default, func, maybe) {
+		if (maybe.$ === 'Just') {
+			var a = maybe.a;
+			return func(a);
+		} else {
+			return _default;
+		}
+	});
+var $elm$json$Json$Encode$null = _Json_encodeNull;
+var $author$project$Api$storeCache = _Platform_outgoingPort(
+	'storeCache',
+	function ($) {
+		return A3($elm$core$Maybe$destruct, $elm$json$Json$Encode$null, $elm$core$Basics$identity, $);
+	});
+var $author$project$Api$emptyCache = $author$project$Api$storeCache($elm$core$Maybe$Nothing);
+var $elm$json$Json$Decode$bool = _Json_decodeBool;
+var $author$project$Api$exit = F2(
+	function (cred, toMsg) {
+		var _v0 = cred;
+		var _v1 = _v0.a;
+		var token = _v1.a;
+		return $elm$http$Http$request(
+			{
+				body: $elm$http$Http$emptyBody,
+				expect: A2(
+					$elm$http$Http$expectJson,
+					toMsg,
+					$author$project$Api$mainDecoder(
+						A2($elm$json$Json$Decode$field, 'ok', $elm$json$Json$Decode$bool))),
+				headers: _List_fromArray(
+					[
+						A2($elm$http$Http$header, 'Authorization', 'Bearer ' + token)
+					]),
+				method: 'GET',
+				timeout: $elm$core$Maybe$Nothing,
+				tracker: $elm$core$Maybe$Nothing,
+				url: $author$project$Api$url_root + 'exit'
+			});
+	});
 var $author$project$Chat$changeText = F2(
 	function (chat, text) {
 		if (chat.$ === 'PersonalChat') {
@@ -11763,10 +11897,6 @@ var $author$project$Chat$pendingMsg = function (chat) {
 var $author$project$Message$Pending = function (a) {
 	return {$: 'Pending', a: a};
 };
-var $elm$time$Time$Posix = function (a) {
-	return {$: 'Posix', a: a};
-};
-var $elm$time$Time$millisToPosix = $elm$time$Time$Posix;
 var $author$project$Message$fromString = F2(
 	function (msg, user) {
 		return $author$project$Message$Pending(
@@ -11885,10 +12015,6 @@ var $elm$core$List$member = F2(
 				return _Utils_eq(a, x);
 			},
 			xs);
-	});
-var $elm$core$Tuple$pair = F2(
-	function (a, b) {
-		return _Utils_Tuple2(a, b);
 	});
 var $elm$core$List$takeReverse = F3(
 	function (n, list, kept) {
@@ -12113,36 +12239,6 @@ var $author$project$Chat$select = F2(
 var $author$project$ChatRoom$GotMessageResponse = function (a) {
 	return {$: 'GotMessageResponse', a: a};
 };
-var $author$project$Message$Confirmed = function (a) {
-	return {$: 'Confirmed', a: a};
-};
-var $author$project$Message$ConfirmedMsg = F4(
-	function (id, sender, body, timeStamp) {
-		return {body: body, id: id, sender: sender, timeStamp: timeStamp};
-	});
-var $author$project$Message$decoder = function (msg) {
-	return $author$project$Api$mainDecoder(
-		A3(
-			$elm$json$Json$Decode$map2,
-			F2(
-				function (chat_id, m) {
-					return _Utils_Tuple3(chat_id, msg, m);
-				}),
-			A2($elm$json$Json$Decode$field, 'chat_id', $elm$json$Json$Decode$string),
-			A2(
-				$elm$json$Json$Decode$map,
-				$author$project$Message$Confirmed,
-				A5(
-					$elm$json$Json$Decode$map4,
-					$author$project$Message$ConfirmedMsg,
-					A2($elm$json$Json$Decode$field, '_id', $elm$json$Json$Decode$string),
-					A2($elm$json$Json$Decode$field, 'sender', $author$project$User$decoder),
-					A2($elm$json$Json$Decode$field, 'body', $elm$json$Json$Decode$string),
-					A2(
-						$elm$json$Json$Decode$field,
-						'time_stamp',
-						A2($elm$json$Json$Decode$map, $elm$time$Time$millisToPosix, $elm$json$Json$Decode$int))))));
-};
 var $elm$json$Json$Encode$int = _Json_wrap;
 var $elm$time$Time$posixToMillis = function (_v0) {
 	var millis = _v0.a;
@@ -12218,12 +12314,23 @@ var $author$project$Api$post = function (request) {
 			url: _Utils_ap($author$project$Api$url_root, request.endpoint)
 		});
 };
+var $author$project$Message$withOriginalDecoder = function (msg) {
+	return A3(
+		$elm$json$Json$Decode$map2,
+		F2(
+			function (chat_id, m) {
+				return _Utils_Tuple3(chat_id, msg, m);
+			}),
+		A2($elm$json$Json$Decode$field, 'chat_id', $elm$json$Json$Decode$string),
+		$author$project$Message$decoder);
+};
 var $author$project$ChatRoom$sendMessage = F3(
 	function (cred, msg, chat_id) {
 		return $author$project$Api$post(
 			{
 				cred: cred,
-				decoder: $author$project$Message$decoder(msg),
+				decoder: $author$project$Api$mainDecoder(
+					$author$project$Message$withOriginalDecoder(msg)),
 				endpoint: 'send-message',
 				toMsg: $author$project$ChatRoom$GotMessageResponse,
 				value: A2($author$project$Message$encode, msg, chat_id)
@@ -12278,6 +12385,13 @@ var $author$project$ChatRoom$update = F2(
 								chat_id);
 						}
 					}());
+			case 'Exit':
+				return _Utils_Tuple2(
+					model,
+					A2(
+						$author$project$Api$exit,
+						$author$project$Viewer$cred(model.viewer),
+						$author$project$ChatRoom$GotExitResponse));
 			case 'SelectChat':
 				var chat = msg.a;
 				return _Utils_Tuple2(
@@ -12312,7 +12426,7 @@ var $author$project$ChatRoom$update = F2(
 						}
 					}(),
 					$elm$core$Platform$Cmd$none);
-			default:
+			case 'GotMessageResponse':
 				var response = msg.a;
 				return _Utils_Tuple2(
 					function () {
@@ -12332,6 +12446,34 @@ var $author$project$ChatRoom$update = F2(
 						}
 					}(),
 					$elm$core$Platform$Cmd$none);
+			case 'GotNewMessage':
+				var response = msg.a;
+				if (response.$ === 'Ok') {
+					var _v8 = response.a;
+					var chat_id = _v8.a;
+					var message = _v8.b;
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								chats: $author$project$Chat$addMessage(
+									{chat_id: chat_id, chats: model.chats, msg: message})
+							}),
+						$elm$core$Platform$Cmd$none);
+				} else {
+					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				}
+			default:
+				var response = msg.a;
+				return _Utils_Tuple2(
+					model,
+					function () {
+						if (response.$ === 'Ok') {
+							return $author$project$Api$emptyCache;
+						} else {
+							return $elm$core$Platform$Cmd$none;
+						}
+					}());
 		}
 	});
 var $author$project$Entrance$GotResponse = function (a) {
@@ -12393,7 +12535,6 @@ var $author$project$Api$enter = F3(
 				url: $author$project$Api$url_root + 'enter'
 			});
 	});
-var $elm$json$Json$Encode$null = _Json_encodeNull;
 var $author$project$User$encode = function (user) {
 	return $elm$json$Json$Encode$object(
 		_List_fromArray(
@@ -12414,20 +12555,6 @@ var $author$project$User$encode = function (user) {
 				}())
 			]));
 };
-var $elm$core$Maybe$destruct = F3(
-	function (_default, func, maybe) {
-		if (maybe.$ === 'Just') {
-			var a = maybe.a;
-			return func(a);
-		} else {
-			return _default;
-		}
-	});
-var $author$project$Api$storeCache = _Platform_outgoingPort(
-	'storeCache',
-	function ($) {
-		return A3($elm$core$Maybe$destruct, $elm$json$Json$Encode$null, $elm$core$Basics$identity, $);
-	});
 var $author$project$Api$storeCredWith = F2(
 	function (_v0, user) {
 		var _v1 = _v0.a;
@@ -12471,6 +12598,16 @@ var $author$project$Viewer$store = function (_v0) {
 var $author$project$Entrance$update = F2(
 	function (msg, model) {
 		switch (msg.$) {
+			case 'NoOp':
+				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+			case 'Enter':
+				return _Utils_Tuple2(
+					model,
+					A3(
+						$author$project$Api$enter,
+						$author$project$Entrance$GotResponse,
+						$author$project$Viewer$decoder,
+						$author$project$Entrance$encode(model)));
 			case 'ChangeEmail':
 				var email = msg.a;
 				return _Utils_Tuple2(
@@ -12499,14 +12636,6 @@ var $author$project$Entrance$update = F2(
 						model,
 						{rememberMe: remember}),
 					$elm$core$Platform$Cmd$none);
-			case 'Enter':
-				return _Utils_Tuple2(
-					model,
-					A3(
-						$author$project$Api$enter,
-						$author$project$Entrance$GotResponse,
-						$author$project$Viewer$decoder,
-						$author$project$Entrance$encode(model)));
 			default:
 				var response = msg.a;
 				if ((response.$ === 'Ok') && (response.a.$ === 'Just')) {
@@ -12550,6 +12679,31 @@ var $author$project$Main$update = F2(
 				}
 			default:
 				var maybeViewer = msg.a;
+				var _v5 = _Utils_Tuple2(maybeViewer, model);
+				_v5$2:
+				while (true) {
+					if (_v5.a.$ === 'Nothing') {
+						if (_v5.b.$ === 'Guest') {
+							var _v6 = _v5.a;
+							return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+						} else {
+							break _v5$2;
+						}
+					} else {
+						if (_v5.b.$ === 'User') {
+							var viewer = _v5.a.a;
+							var chatRoom = _v5.b.a;
+							return _Utils_Tuple2(
+								$author$project$Main$User(
+									_Utils_update(
+										chatRoom,
+										{viewer: viewer})),
+								$elm$core$Platform$Cmd$none);
+						} else {
+							break _v5$2;
+						}
+					}
+				}
 				return $author$project$Main$init(maybeViewer);
 		}
 	});
@@ -19520,7 +19674,6 @@ var $mdgriffith$elm_ui$Element$Input$multiline = F2(
 			attrs,
 			{label: multi.label, onChange: multi.onChange, placeholder: multi.placeholder, text: multi.text});
 	});
-var $elm$json$Json$Decode$bool = _Json_decodeBool;
 var $elm$json$Json$Decode$fail = _Json_fail;
 var $elm$html$Html$Events$keyCode = A2($elm$json$Json$Decode$field, 'keyCode', $elm$json$Json$Decode$int);
 var $elm$virtual_dom$VirtualDom$MayPreventDefault = function (a) {
@@ -19533,7 +19686,7 @@ var $elm$html$Html$Events$preventDefaultOn = F2(
 			event,
 			$elm$virtual_dom$VirtualDom$MayPreventDefault(decoder));
 	});
-var $author$project$ChatRoom$onEnterHandler = F2(
+var $author$project$Util$onEnterHandler = F2(
 	function (send, noOp) {
 		return A2(
 			$elm$html$Html$Events$preventDefaultOn,
@@ -19586,7 +19739,7 @@ var $author$project$ChatRoom$viewTextInput = function (msg) {
 						$mdgriffith$elm_ui$Element$Border$width(0),
 						$mdgriffith$elm_ui$Element$focused(_List_Nil),
 						$mdgriffith$elm_ui$Element$htmlAttribute(
-						A2($author$project$ChatRoom$onEnterHandler, $author$project$ChatRoom$SendMessage, $author$project$ChatRoom$NoOp)),
+						A2($author$project$Util$onEnterHandler, $author$project$ChatRoom$SendMessage, $author$project$ChatRoom$NoOp)),
 						$mdgriffith$elm_ui$Element$Font$size(16),
 						$mdgriffith$elm_ui$Element$htmlAttribute(
 						A2($elm$html$Html$Attributes$style, 'overflow-wrap', 'break-word'))
@@ -19607,7 +19760,7 @@ var $author$project$ChatRoom$viewTextInput = function (msg) {
 var $author$project$ChatRoom$viewChatBody = F2(
 	function (chats, sender) {
 		return A2(
-			$mdgriffith$elm_ui$Element$column,
+			$mdgriffith$elm_ui$Element$el,
 			_List_fromArray(
 				[
 					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
@@ -19616,26 +19769,30 @@ var $author$project$ChatRoom$viewChatBody = F2(
 			function () {
 				var _v0 = $author$project$Chat$selected(chats);
 				if (_v0.$ === 'Nothing') {
-					return _List_fromArray(
-						[
-							A2(
-							$mdgriffith$elm_ui$Element$el,
-							_List_fromArray(
-								[$mdgriffith$elm_ui$Element$centerX, $mdgriffith$elm_ui$Element$centerY]),
-							$mdgriffith$elm_ui$Element$text('Chat Body...'))
-						]);
+					return A2(
+						$mdgriffith$elm_ui$Element$el,
+						_List_fromArray(
+							[$mdgriffith$elm_ui$Element$centerX, $mdgriffith$elm_ui$Element$centerY]),
+						$mdgriffith$elm_ui$Element$text('Chat Body...'));
 				} else {
 					var chat = _v0.a;
-					return _List_fromArray(
-						[
-							$author$project$ChatRoom$viewChatToolBar(chat),
-							A2(
-							$author$project$ChatRoom$viewMessages,
-							$author$project$Chat$messages(chat),
-							sender),
-							$author$project$ChatRoom$viewTextInput(
-							$author$project$Chat$pendingMsg(chat))
-						]);
+					return A2(
+						$mdgriffith$elm_ui$Element$column,
+						_List_fromArray(
+							[
+								$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+								$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill)
+							]),
+						_List_fromArray(
+							[
+								$author$project$ChatRoom$viewChatToolBar(chat),
+								A2(
+								$author$project$ChatRoom$viewMessages,
+								$author$project$Chat$messages(chat),
+								sender),
+								$author$project$ChatRoom$viewTextInput(
+								$author$project$Chat$pendingMsg(chat))
+							]));
 				}
 			}());
 	});
@@ -19729,7 +19886,7 @@ var $mdgriffith$elm_ui$Element$mouseOver = function (decs) {
 };
 var $mdgriffith$elm_ui$Element$Events$onMouseDown = A2($elm$core$Basics$composeL, $mdgriffith$elm_ui$Internal$Model$Attr, $elm$html$Html$Events$onMouseDown);
 var $mdgriffith$elm_ui$Element$pointer = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$cursor, $mdgriffith$elm_ui$Internal$Style$classes.cursorPointer);
-var $author$project$ChatRoom$viewChatRow = F2(
+var $author$project$ChatRoom$viewChatTab = F2(
 	function (chat, open) {
 		return A2(
 			$mdgriffith$elm_ui$Element$row,
@@ -19806,7 +19963,7 @@ var $author$project$ChatRoom$viewChats = function (chats) {
 						$elm$core$List$map,
 						function (chat) {
 							return A2(
-								$author$project$ChatRoom$viewChatRow,
+								$author$project$ChatRoom$viewChatTab,
 								chat,
 								_Utils_eq(
 									$author$project$Chat$selected(chats),
@@ -19816,7 +19973,86 @@ var $author$project$ChatRoom$viewChats = function (chats) {
 				_List_fromArray(
 					[$author$project$ChatRoom$viewDivider]))));
 };
-var $author$project$ChatRoom$viewSideBar = function (model) {
+var $author$project$ChatRoom$Exit = {$: 'Exit'};
+var $elm$html$Html$Attributes$alt = $elm$html$Html$Attributes$stringProperty('alt');
+var $elm$html$Html$Attributes$src = function (url) {
+	return A2(
+		$elm$html$Html$Attributes$stringProperty,
+		'src',
+		_VirtualDom_noJavaScriptOrHtmlUri(url));
+};
+var $mdgriffith$elm_ui$Element$image = F2(
+	function (attrs, _v0) {
+		var src = _v0.src;
+		var description = _v0.description;
+		var imageAttributes = A2(
+			$elm$core$List$filter,
+			function (a) {
+				switch (a.$) {
+					case 'Width':
+						return true;
+					case 'Height':
+						return true;
+					default:
+						return false;
+				}
+			},
+			attrs);
+		return A4(
+			$mdgriffith$elm_ui$Internal$Model$element,
+			$mdgriffith$elm_ui$Internal$Model$asEl,
+			$mdgriffith$elm_ui$Internal$Model$div,
+			A2(
+				$elm$core$List$cons,
+				$mdgriffith$elm_ui$Internal$Model$htmlClass($mdgriffith$elm_ui$Internal$Style$classes.imageContainer),
+				attrs),
+			$mdgriffith$elm_ui$Internal$Model$Unkeyed(
+				_List_fromArray(
+					[
+						A4(
+						$mdgriffith$elm_ui$Internal$Model$element,
+						$mdgriffith$elm_ui$Internal$Model$asEl,
+						$mdgriffith$elm_ui$Internal$Model$NodeName('img'),
+						_Utils_ap(
+							_List_fromArray(
+								[
+									$mdgriffith$elm_ui$Internal$Model$Attr(
+									$elm$html$Html$Attributes$src(src)),
+									$mdgriffith$elm_ui$Internal$Model$Attr(
+									$elm$html$Html$Attributes$alt(description))
+								]),
+							imageAttributes),
+						$mdgriffith$elm_ui$Internal$Model$Unkeyed(_List_Nil))
+					])));
+	});
+var $mdgriffith$elm_ui$Element$Events$onMouseUp = A2($elm$core$Basics$composeL, $mdgriffith$elm_ui$Internal$Model$Attr, $elm$html$Html$Events$onMouseUp);
+var $author$project$ChatRoom$viewSideToolBar = A2(
+	$mdgriffith$elm_ui$Element$row,
+	_List_fromArray(
+		[
+			$mdgriffith$elm_ui$Element$height(
+			$mdgriffith$elm_ui$Element$px(72)),
+			$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+			$mdgriffith$elm_ui$Element$padding(12),
+			$mdgriffith$elm_ui$Element$spacing(12),
+			$mdgriffith$elm_ui$Element$Background$color(
+			A4($mdgriffith$elm_ui$Element$rgba, 1, 1, 1, 0.1)),
+			$mdgriffith$elm_ui$Element$Events$onMouseUp($author$project$ChatRoom$Exit)
+		]),
+	_List_fromArray(
+		[
+			A2(
+			$mdgriffith$elm_ui$Element$image,
+			_List_fromArray(
+				[$mdgriffith$elm_ui$Element$alignLeft, $mdgriffith$elm_ui$Element$centerY, $mdgriffith$elm_ui$Element$pointer]),
+			{description: 'exit', src: '/assets/exit_from_app-24px.svg'}),
+			A2(
+			$mdgriffith$elm_ui$Element$el,
+			_List_fromArray(
+				[$mdgriffith$elm_ui$Element$centerX, $mdgriffith$elm_ui$Element$centerY]),
+			$mdgriffith$elm_ui$Element$text('Side Bar...'))
+		]));
+var $author$project$ChatRoom$viewSideMenu = function (model) {
 	return A2(
 		$mdgriffith$elm_ui$Element$column,
 		_List_fromArray(
@@ -19840,24 +20076,7 @@ var $author$project$ChatRoom$viewSideBar = function (model) {
 			]),
 		_List_fromArray(
 			[
-				A2(
-				$mdgriffith$elm_ui$Element$row,
-				_List_fromArray(
-					[
-						$mdgriffith$elm_ui$Element$height(
-						$mdgriffith$elm_ui$Element$px(72)),
-						$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-						$mdgriffith$elm_ui$Element$Background$color(
-						A4($mdgriffith$elm_ui$Element$rgba, 1, 1, 1, 0.1))
-					]),
-				_List_fromArray(
-					[
-						A2(
-						$mdgriffith$elm_ui$Element$el,
-						_List_fromArray(
-							[$mdgriffith$elm_ui$Element$centerX, $mdgriffith$elm_ui$Element$centerY]),
-						$mdgriffith$elm_ui$Element$text('Side Bar...'))
-					])),
+				$author$project$ChatRoom$viewSideToolBar,
 				$author$project$ChatRoom$viewChats(model.chats)
 			]));
 };
@@ -19872,7 +20091,7 @@ var $author$project$ChatRoom$view = function (model) {
 				]),
 			_List_fromArray(
 				[
-					$author$project$ChatRoom$viewSideBar(model),
+					$author$project$ChatRoom$viewSideMenu(model),
 					A2(
 					$author$project$ChatRoom$viewChatBody,
 					model.chats,
@@ -19881,6 +20100,8 @@ var $author$project$ChatRoom$view = function (model) {
 		title: 'Chat'
 	};
 };
+var $author$project$Entrance$Enter = {$: 'Enter'};
+var $author$project$Entrance$NoOp = {$: 'NoOp'};
 var $mdgriffith$elm_ui$Internal$Model$boxShadowClass = function (shadow) {
 	return $elm$core$String$concat(
 		_List_fromArray(
@@ -19980,7 +20201,6 @@ var $author$project$Entrance$viewEmailField = function (email) {
 			text: email
 		});
 };
-var $author$project$Entrance$Enter = {$: 'Enter'};
 var $mdgriffith$elm_ui$Element$Font$bold = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontWeight, $mdgriffith$elm_ui$Internal$Style$classes.bold);
 var $mdgriffith$elm_ui$Internal$Model$Button = {$: 'Button'};
 var $elm$html$Html$Attributes$disabled = $elm$html$Html$Attributes$boolProperty('disabled');
@@ -20208,57 +20428,6 @@ var $mdgriffith$elm_ui$Element$Input$checkbox = F2(
 							icon(checked)
 						]))));
 	});
-var $elm$html$Html$Attributes$alt = $elm$html$Html$Attributes$stringProperty('alt');
-var $elm$html$Html$Attributes$src = function (url) {
-	return A2(
-		$elm$html$Html$Attributes$stringProperty,
-		'src',
-		_VirtualDom_noJavaScriptOrHtmlUri(url));
-};
-var $mdgriffith$elm_ui$Element$image = F2(
-	function (attrs, _v0) {
-		var src = _v0.src;
-		var description = _v0.description;
-		var imageAttributes = A2(
-			$elm$core$List$filter,
-			function (a) {
-				switch (a.$) {
-					case 'Width':
-						return true;
-					case 'Height':
-						return true;
-					default:
-						return false;
-				}
-			},
-			attrs);
-		return A4(
-			$mdgriffith$elm_ui$Internal$Model$element,
-			$mdgriffith$elm_ui$Internal$Model$asEl,
-			$mdgriffith$elm_ui$Internal$Model$div,
-			A2(
-				$elm$core$List$cons,
-				$mdgriffith$elm_ui$Internal$Model$htmlClass($mdgriffith$elm_ui$Internal$Style$classes.imageContainer),
-				attrs),
-			$mdgriffith$elm_ui$Internal$Model$Unkeyed(
-				_List_fromArray(
-					[
-						A4(
-						$mdgriffith$elm_ui$Internal$Model$element,
-						$mdgriffith$elm_ui$Internal$Model$asEl,
-						$mdgriffith$elm_ui$Internal$Model$NodeName('img'),
-						_Utils_ap(
-							_List_fromArray(
-								[
-									$mdgriffith$elm_ui$Internal$Model$Attr(
-									$elm$html$Html$Attributes$src(src)),
-									$mdgriffith$elm_ui$Internal$Model$Attr(
-									$elm$html$Html$Attributes$alt(description))
-								]),
-							imageAttributes),
-						$mdgriffith$elm_ui$Internal$Model$Unkeyed(_List_Nil))
-					])));
-	});
 var $mdgriffith$elm_ui$Internal$Model$MoveX = function (a) {
 	return {$: 'MoveX', a: a};
 };
@@ -20338,7 +20507,9 @@ var $author$project$Entrance$viewForm = function (model) {
 						$mdgriffith$elm_ui$Element$padding(32),
 						$mdgriffith$elm_ui$Element$spacing(16),
 						$mdgriffith$elm_ui$Element$width(
-						$mdgriffith$elm_ui$Element$px(420))
+						$mdgriffith$elm_ui$Element$px(420)),
+						$mdgriffith$elm_ui$Element$htmlAttribute(
+						A2($author$project$Util$onEnterHandler, $author$project$Entrance$Enter, $author$project$Entrance$NoOp))
 					]),
 				_List_fromArray(
 					[
@@ -20392,4 +20563,4 @@ var $author$project$Main$main = A2(
 	$author$project$Api$document,
 	$author$project$Viewer$decoder,
 	{init: $author$project$Main$init, subscriptions: $author$project$Main$subscriptions, update: $author$project$Main$update, view: $author$project$Main$view});
-_Platform_export({'Main':{'init':$author$project$Main$main($elm$json$Json$Decode$value)({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{"User.User":{"args":[],"type":"{ email : String.String, userName : Maybe.Maybe String.String }"},"Message.ConfirmedMsg":{"args":[],"type":"{ id : String.String, sender : User.User, body : String.String, timeStamp : Time.Posix }"},"Chat.GroupChatRecord":{"args":[],"type":"{ id : String.String, name : Maybe.Maybe String.String, members : List.List User.User, messages : List.List Message.Message, pendingMsg : String.String }"},"Message.PendingMsg":{"args":[],"type":"{ sender : User.User, body : String.String, timeStamp : Time.Posix }"},"Chat.PersonalChatRecord":{"args":[],"type":"{ id : String.String, recipient : User.User, messages : List.List Message.Message, pendingMsg : String.String }"}},"unions":{"Main.Msg":{"args":[],"tags":{"GotEntranceMsg":["Entrance.Msg"],"GotChatRoomMsg":["ChatRoom.Msg"],"GotViewer":["Maybe.Maybe Viewer.Viewer"]}},"Maybe.Maybe":{"args":["a"],"tags":{"Just":["a"],"Nothing":[]}},"ChatRoom.Msg":{"args":[],"tags":{"NoOp":[],"SendMessage":[],"SelectChat":["Chat.Chat"],"ChangText":["String.String"],"GotChats":["Result.Result Http.Error (List.List Chat.Chat)"],"GotMessageResponse":["Result.Result Http.Error ( String.String, Message.Message, Message.Message )"]}},"Entrance.Msg":{"args":[],"tags":{"ChangeEmail":["String.String"],"ChangePassword":["String.String"],"ToggleShowPassword":["Basics.Bool"],"ToggleRememberMe":["Basics.Bool"],"Enter":[],"GotResponse":["Result.Result Http.Error (Maybe.Maybe Viewer.Viewer)"]}},"Viewer.Viewer":{"args":[],"tags":{"Viewer":["User.User","Api.Cred"]}},"Basics.Bool":{"args":[],"tags":{"True":[],"False":[]}},"Chat.Chat":{"args":[],"tags":{"PersonalChat":["Chat.PersonalChatRecord"],"GroupChat":["Chat.GroupChatRecord"]}},"Api.Cred":{"args":[],"tags":{"Cred":["Api.RefreshToken","Api.AccessToken"]}},"Http.Error":{"args":[],"tags":{"BadUrl":["String.String"],"Timeout":[],"NetworkError":[],"BadStatus":["Basics.Int"],"BadBody":["String.String"]}},"List.List":{"args":["a"],"tags":{}},"Message.Message":{"args":[],"tags":{"Confirmed":["Message.ConfirmedMsg"],"Pending":["Message.PendingMsg"]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}},"Api.AccessToken":{"args":[],"tags":{"AccessToken":["Maybe.Maybe String.String","Basics.Int"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"Time.Posix":{"args":[],"tags":{"Posix":["Basics.Int"]}},"Api.RefreshToken":{"args":[],"tags":{"RefreshToken":["String.String","Basics.Int"]}}}}})}});}(this));
+_Platform_export({'Main':{'init':$author$project$Main$main($elm$json$Json$Decode$value)({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{"User.User":{"args":[],"type":"{ email : String.String, userName : Maybe.Maybe String.String }"},"Message.ConfirmedMsg":{"args":[],"type":"{ id : String.String, sender : User.User, body : String.String, timeStamp : Time.Posix }"},"Chat.GroupChatRecord":{"args":[],"type":"{ id : String.String, name : Maybe.Maybe String.String, members : List.List User.User, messages : List.List Message.Message, pendingMsg : String.String }"},"Message.PendingMsg":{"args":[],"type":"{ sender : User.User, body : String.String, timeStamp : Time.Posix }"},"Chat.PersonalChatRecord":{"args":[],"type":"{ id : String.String, recipient : User.User, messages : List.List Message.Message, pendingMsg : String.String }"},"Json.Decode.Value":{"args":[],"type":"Json.Encode.Value"}},"unions":{"Main.Msg":{"args":[],"tags":{"GotEntranceMsg":["Entrance.Msg"],"GotChatRoomMsg":["ChatRoom.Msg"],"GotViewer":["Maybe.Maybe Viewer.Viewer"]}},"Maybe.Maybe":{"args":["a"],"tags":{"Just":["a"],"Nothing":[]}},"ChatRoom.Msg":{"args":[],"tags":{"NoOp":[],"SendMessage":[],"Exit":[],"SelectChat":["Chat.Chat"],"ChangText":["String.String"],"GotChats":["Result.Result Http.Error (List.List Chat.Chat)"],"GotMessageResponse":["Result.Result Http.Error ( String.String, Message.Message, Message.Message )"],"GotNewMessage":["Result.Result Json.Decode.Error ( String.String, Message.Message )"],"GotExitResponse":["Result.Result Http.Error Basics.Bool"]}},"Entrance.Msg":{"args":[],"tags":{"NoOp":[],"Enter":[],"ChangeEmail":["String.String"],"ChangePassword":["String.String"],"ToggleShowPassword":["Basics.Bool"],"ToggleRememberMe":["Basics.Bool"],"GotResponse":["Result.Result Http.Error (Maybe.Maybe Viewer.Viewer)"]}},"Viewer.Viewer":{"args":[],"tags":{"Viewer":["User.User","Api.Cred"]}},"Basics.Bool":{"args":[],"tags":{"True":[],"False":[]}},"Chat.Chat":{"args":[],"tags":{"PersonalChat":["Chat.PersonalChatRecord"],"GroupChat":["Chat.GroupChatRecord"]}},"Api.Cred":{"args":[],"tags":{"Cred":["Api.RefreshToken","Api.AccessToken"]}},"Http.Error":{"args":[],"tags":{"BadUrl":["String.String"],"Timeout":[],"NetworkError":[],"BadStatus":["Basics.Int"],"BadBody":["String.String"]}},"Json.Decode.Error":{"args":[],"tags":{"Field":["String.String","Json.Decode.Error"],"Index":["Basics.Int","Json.Decode.Error"],"OneOf":["List.List Json.Decode.Error"],"Failure":["String.String","Json.Decode.Value"]}},"List.List":{"args":["a"],"tags":{}},"Message.Message":{"args":[],"tags":{"Confirmed":["Message.ConfirmedMsg"],"Pending":["Message.PendingMsg"]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}},"Api.AccessToken":{"args":[],"tags":{"AccessToken":["Maybe.Maybe String.String","Basics.Int"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"Time.Posix":{"args":[],"tags":{"Posix":["Basics.Int"]}},"Api.RefreshToken":{"args":[],"tags":{"RefreshToken":["String.String","Basics.Int"]}},"Json.Encode.Value":{"args":[],"tags":{"Value":[]}}}}})}});}(this));
