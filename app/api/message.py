@@ -6,14 +6,13 @@ from . import api
 from app.models.chat import Chat
 from app.models.user import User, PendingMsg
 from bson import ObjectId
+from config import NAMESPACE
 import time
 
 
 @api.route("/send-message", methods=["POST"])
 @jwt_required
 def send_message():
-    time.sleep(1)
-
     data = request.get_json()
     current_user = get_jwt_identity()
     time_stamp = datetime.utcnow()
@@ -26,12 +25,13 @@ def send_message():
                                      body=data["body"], time_stamp=time_stamp)
             response = {"data": {
                 "_id": str(pending_msg._id), "sender": {"email": sender.email, "user_name": sender.user_name},
-                "chat_id": str(chat.id), "body": data["body"], "time_stamp": int(time_stamp.timestamp())
+                "chat_id": str(chat.id), "body": pending_msg.body, "time_stamp": int(time_stamp.timestamp())
             }}
             for user in chat.members:
                 user.pending_msgs.append(pending_msg)
                 user.save()
-                emit("new message", response, namespace="/dev", room=user.sid)
+                if user.sid and user != sender:
+                    emit("new message", response, namespace=NAMESPACE, room=user.sid)
         else:
             response = {"error": "you aren't a part of this chat."}
     else:

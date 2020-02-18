@@ -34,11 +34,12 @@ def enter():
     return jsonify(response)
 
 
-@api.route("/exit", methods=["POST"])
+@api.route("/exit", methods=["GET"])
 @jwt_refresh_token_required
 def exit_():
     jti = get_raw_jwt()['jti']
     blacklist.add(jti)
+    return jsonify({"data": {"ok": True}})
 
 
 @api.route("/refresh", methods=["GET"])

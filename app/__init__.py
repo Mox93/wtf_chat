@@ -48,9 +48,20 @@ socket_IO = SocketIO(app)
 @socket_IO.on("init", namespace=NAMESPACE)
 @jwt_required
 def init():
+    print("Initializing...")
     current_user = get_jwt_identity()
     user = User.find_by_email(current_user["email"])
     user.sid = request.sid
+    user.save()
+
+
+@socket_IO.on("kill", namespace=NAMESPACE)
+@jwt_required
+def kill():
+    print("Killing...")
+    current_user = get_jwt_identity()
+    user = User.find_by_email(current_user["email"])
+    user.sid = None
     user.save()
 
 

@@ -30,7 +30,7 @@ def assets(file_name):
 
 @web.route("/", methods=["GET"])
 def root():
-    return render_template("index.html", url=f"http://{HOST}:{PORT}/", namespace=NAMESPACE)
+    return render_template("index.html", url=f"http://{HOST}:{PORT}", namespace=NAMESPACE)
 
 
 @web.route("/<path:url>", methods=["GET"])
