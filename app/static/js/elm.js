@@ -5695,17 +5695,6 @@ var $elm$core$Result$isOk = function (result) {
 };
 var $elm$json$Json$Decode$succeed = _Json_succeed;
 var $author$project$Viewer$decoder = $elm$json$Json$Decode$succeed($author$project$Viewer$Viewer);
-var $elm$core$Result$andThen = F2(
-	function (callback, result) {
-		if (result.$ === 'Ok') {
-			var value = result.a;
-			return callback(value);
-		} else {
-			var msg = result.a;
-			return $elm$core$Result$Err(msg);
-		}
-	});
-var $elm$json$Json$Decode$decodeString = _Json_runOnString;
 var $elm$json$Json$Decode$decodeValue = _Json_run;
 var $elm$json$Json$Decode$map = _Json_map1;
 var $elm$json$Json$Decode$map2 = _Json_map2;
@@ -9165,6 +9154,7 @@ var $elm$browser$Debugger$Metadata$check = F2(
 	});
 var $elm$browser$Debugger$Report$CorruptHistory = {$: 'CorruptHistory'};
 var $elm$browser$Debugger$Overlay$corruptImport = $elm$browser$Debugger$Overlay$BadImport($elm$browser$Debugger$Report$CorruptHistory);
+var $elm$json$Json$Decode$decodeString = _Json_runOnString;
 var $elm$browser$Debugger$Report$Fine = {$: 'Fine'};
 var $elm$browser$Debugger$Report$Impossible = {$: 'Impossible'};
 var $elm$browser$Debugger$Report$Risky = {$: 'Risky'};
@@ -10855,6 +10845,16 @@ var $truqu$elm_base64$Base64$Decode$pad = function (input) {
 			return input;
 	}
 };
+var $elm$core$Result$andThen = F2(
+	function (callback, result) {
+		if (result.$ === 'Ok') {
+			var value = result.a;
+			return callback(value);
+		} else {
+			var msg = result.a;
+			return $elm$core$Result$Err(msg);
+		}
+	});
 var $truqu$elm_base64$Base64$Decode$charToInt = function (_char) {
 	switch (_char.valueOf()) {
 		case 'A':
@@ -11231,16 +11231,34 @@ var $elm$core$Result$toMaybe = function (result) {
 		return $elm$core$Maybe$Nothing;
 	}
 };
+var $author$project$Api$flagDecoder = function (viewerDecoder) {
+	return A3(
+		$elm$json$Json$Decode$map2,
+		F2(
+			function (url, storage) {
+				var maybeViewer = $elm$core$Result$toMaybe(
+					A2(
+						$elm$json$Json$Decode$decodeString,
+						$author$project$Api$storageDecoder(viewerDecoder),
+						storage));
+				return {maybeViewer: maybeViewer, url: url};
+			}),
+		A2($elm$json$Json$Decode$field, 'url', $elm$json$Json$Decode$string),
+		A2($elm$json$Json$Decode$field, 'viewer', $elm$json$Json$Decode$string));
+};
 var $author$project$Api$document = F2(
 	function (viewerDecoder, config) {
 		var init_ = function (flags) {
-			var maybeViewer = $elm$core$Result$toMaybe(
+			var _v0 = A2(
+				$elm$core$Result$withDefault,
+				{maybeViewer: $elm$core$Maybe$Nothing, url: ''},
 				A2(
-					$elm$core$Result$andThen,
-					$elm$json$Json$Decode$decodeString(
-						$author$project$Api$storageDecoder(viewerDecoder)),
-					A2($elm$json$Json$Decode$decodeValue, $elm$json$Json$Decode$string, flags)));
-			return config.init(maybeViewer);
+					$elm$json$Json$Decode$decodeValue,
+					$author$project$Api$flagDecoder(viewerDecoder),
+					flags));
+			var url = _v0.url;
+			var maybeViewer = _v0.maybeViewer;
+			return A2(config.init, url, maybeViewer);
 		};
 		return $elm$browser$Browser$document(
 			{init: init_, subscriptions: config.subscriptions, update: config.update, view: config.view});
@@ -11605,27 +11623,37 @@ var $author$project$ChatRoom$init = function (viewer) {
 		{
 			chats: $author$project$Chat$fromList(_List_Nil),
 			contacts: _List_Nil,
+			dialogBox: $elm$core$Maybe$Nothing,
 			viewer: viewer
 		},
 		$author$project$ChatRoom$getChats(
 			$author$project$Viewer$cred(viewer)));
 };
-var $author$project$Main$init = function (maybeViewer) {
-	if (maybeViewer.$ === 'Just') {
-		var viewer = maybeViewer.a;
-		var _v1 = $author$project$ChatRoom$init(viewer);
-		var model = _v1.a;
-		var cmd = _v1.b;
-		return _Utils_Tuple2(
-			$author$project$Main$User(model),
-			A2($elm$core$Platform$Cmd$map, $author$project$Main$GotChatRoomMsg, cmd));
-	} else {
-		return _Utils_Tuple2(
-			$author$project$Main$Guest(
-				{email: '', password: '', rememberMe: false, showPassword: false}),
-			$elm$core$Platform$Cmd$none);
-	}
-};
+var $elm$core$Debug$log = _Debug_log;
+var $author$project$Main$init = F2(
+	function (url, maybeViewer) {
+		var _v0 = A2($elm$core$Debug$log, 'maybeViewer', maybeViewer);
+		if (maybeViewer.$ === 'Just') {
+			var viewer = maybeViewer.a;
+			var _v2 = $author$project$ChatRoom$init(viewer);
+			var model = _v2.a;
+			var cmd = _v2.b;
+			return _Utils_Tuple2(
+				{
+					state: $author$project$Main$User(model),
+					url: url
+				},
+				A2($elm$core$Platform$Cmd$map, $author$project$Main$GotChatRoomMsg, cmd));
+		} else {
+			return _Utils_Tuple2(
+				{
+					state: $author$project$Main$Guest(
+						{email: '', password: '', rememberMe: false, showPassword: false}),
+					url: ''
+				},
+				$elm$core$Platform$Cmd$none);
+		}
+	});
 var $author$project$Main$GotViewer = function (a) {
 	return {$: 'GotViewer', a: a};
 };
@@ -11707,7 +11735,8 @@ var $author$project$Main$subscriptions = function (model) {
 				},
 				$author$project$Viewer$decoder),
 				function () {
-				if (model.$ === 'Guest') {
+				var _v0 = model.state;
+				if (_v0.$ === 'Guest') {
 					return $elm$core$Platform$Sub$none;
 				} else {
 					return A2($elm$core$Platform$Sub$map, $author$project$Main$GotChatRoomMsg, $author$project$ChatRoom$subscriptions);
@@ -11720,6 +11749,9 @@ var $author$project$Main$GotEntranceMsg = function (a) {
 };
 var $author$project$ChatRoom$GotExitResponse = function (a) {
 	return {$: 'GotExitResponse', a: a};
+};
+var $author$project$ChatRoom$NewContact = function (a) {
+	return {$: 'NewContact', a: a};
 };
 var $author$project$Chat$Active = F3(
 	function (a, b, c) {
@@ -11966,6 +11998,60 @@ var $author$project$Chat$moveToBody = F2(
 			}
 		}
 	});
+var $author$project$ChatRoom$GotNewChat = function (a) {
+	return {$: 'GotNewChat', a: a};
+};
+var $elm$http$Http$jsonBody = function (value) {
+	return A2(
+		_Http_pair,
+		'application/json',
+		A2($elm$json$Json$Encode$encode, 0, value));
+};
+var $author$project$Api$post = function (request) {
+	var _v0 = request.cred;
+	var _v1 = _v0.b;
+	var maybeToken = _v1.a;
+	return $elm$http$Http$request(
+		{
+			body: $elm$http$Http$jsonBody(request.value),
+			expect: A2($elm$http$Http$expectJson, request.toMsg, request.decoder),
+			headers: function () {
+				if (maybeToken.$ === 'Nothing') {
+					return _List_Nil;
+				} else {
+					var token = maybeToken.a;
+					return _List_fromArray(
+						[
+							A2($elm$http$Http$header, 'Authorization', 'Bearer ' + token)
+						]);
+				}
+			}(),
+			method: 'POST',
+			timeout: $elm$core$Maybe$Nothing,
+			tracker: $elm$core$Maybe$Nothing,
+			url: _Utils_ap($author$project$Api$url_root, request.endpoint)
+		});
+};
+var $author$project$ChatRoom$newChat = F2(
+	function (cred, email) {
+		return $author$project$Api$post(
+			{
+				cred: cred,
+				decoder: $author$project$Api$mainDecoder($author$project$Chat$decoder),
+				endpoint: 'new-chat',
+				toMsg: $author$project$ChatRoom$GotNewChat,
+				value: $elm$json$Json$Encode$object(
+					_List_fromArray(
+						[
+							_Utils_Tuple2(
+							'recipient',
+							$elm$json$Json$Encode$string(email))
+						]))
+			});
+	});
+var $author$project$Util$pass = function (model) {
+	return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+};
 var $elm$core$List$filter = F2(
 	function (isGood, list) {
 		return A3(
@@ -12283,37 +12369,6 @@ var $author$project$Message$encode = F2(
 					]));
 		}
 	});
-var $elm$http$Http$jsonBody = function (value) {
-	return A2(
-		_Http_pair,
-		'application/json',
-		A2($elm$json$Json$Encode$encode, 0, value));
-};
-var $author$project$Api$post = function (request) {
-	var _v0 = request.cred;
-	var _v1 = _v0.b;
-	var maybeToken = _v1.a;
-	return $elm$http$Http$request(
-		{
-			body: $elm$http$Http$jsonBody(request.value),
-			expect: A2($elm$http$Http$expectJson, request.toMsg, request.decoder),
-			headers: function () {
-				if (maybeToken.$ === 'Nothing') {
-					return _List_Nil;
-				} else {
-					var token = maybeToken.a;
-					return _List_fromArray(
-						[
-							A2($elm$http$Http$header, 'Authorization', 'Bearer ' + token)
-						]);
-				}
-			}(),
-			method: 'POST',
-			timeout: $elm$core$Maybe$Nothing,
-			tracker: $elm$core$Maybe$Nothing,
-			url: _Utils_ap($author$project$Api$url_root, request.endpoint)
-		});
-};
 var $author$project$Message$withOriginalDecoder = function (msg) {
 	return A3(
 		$elm$json$Json$Decode$map2,
@@ -12359,7 +12414,14 @@ var $author$project$ChatRoom$update = F2(
 	function (msg, model) {
 		switch (msg.$) {
 			case 'NoOp':
-				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				return $author$project$Util$pass(model);
+			case 'Exit':
+				return _Utils_Tuple2(
+					model,
+					A2(
+						$author$project$Api$exit,
+						$author$project$Viewer$cred(model.viewer),
+						$author$project$ChatRoom$GotExitResponse));
 			case 'SendMessage':
 				var _v1 = A2(
 					$author$project$Chat$moveToBody,
@@ -12385,34 +12447,58 @@ var $author$project$ChatRoom$update = F2(
 								chat_id);
 						}
 					}());
-			case 'Exit':
-				return _Utils_Tuple2(
-					model,
-					A2(
-						$author$project$Api$exit,
-						$author$project$Viewer$cred(model.viewer),
-						$author$project$ChatRoom$GotExitResponse));
+			case 'AddChat':
+				var _v4 = model.dialogBox;
+				if (_v4.$ === 'Nothing') {
+					return $author$project$Util$pass(model);
+				} else {
+					var email = _v4.a.a;
+					return _Utils_Tuple2(
+						model,
+						A2(
+							$author$project$ChatRoom$newChat,
+							$author$project$Viewer$cred(model.viewer),
+							email));
+				}
 			case 'SelectChat':
 				var chat = msg.a;
-				return _Utils_Tuple2(
+				return $author$project$Util$pass(
 					_Utils_update(
 						model,
 						{
 							chats: A2($author$project$Chat$select, model.chats, chat)
-						}),
-					$elm$core$Platform$Cmd$none);
+						}));
 			case 'ChangText':
 				var text = msg.a;
-				return _Utils_Tuple2(
+				return $author$project$Util$pass(
 					_Utils_update(
 						model,
 						{
 							chats: A2($author$project$Chat$updateText, model.chats, text)
-						}),
-					$elm$core$Platform$Cmd$none);
+						}));
+			case 'ToggleDialogBox':
+				var maybeDialogBox = msg.a;
+				return $author$project$Util$pass(
+					_Utils_update(
+						model,
+						{dialogBox: maybeDialogBox}));
+			case 'ChangeEmail':
+				var email = msg.a;
+				var _v5 = model.dialogBox;
+				if (_v5.$ === 'Nothing') {
+					return $author$project$Util$pass(model);
+				} else {
+					return $author$project$Util$pass(
+						_Utils_update(
+							model,
+							{
+								dialogBox: $elm$core$Maybe$Just(
+									$author$project$ChatRoom$NewContact(email))
+							}));
+				}
 			case 'GotChats':
 				var response = msg.a;
-				return _Utils_Tuple2(
+				return $author$project$Util$pass(
 					function () {
 						if (response.$ === 'Ok') {
 							var chats = response.a;
@@ -12424,17 +12510,16 @@ var $author$project$ChatRoom$update = F2(
 						} else {
 							return model;
 						}
-					}(),
-					$elm$core$Platform$Cmd$none);
+					}());
 			case 'GotMessageResponse':
 				var response = msg.a;
-				return _Utils_Tuple2(
+				return $author$project$Util$pass(
 					function () {
 						if (response.$ === 'Ok') {
-							var _v6 = response.a;
-							var chat_id = _v6.a;
-							var oldMsg = _v6.b;
-							var newMsg = _v6.c;
+							var _v8 = response.a;
+							var chat_id = _v8.a;
+							var oldMsg = _v8.b;
+							var newMsg = _v8.c;
 							return _Utils_update(
 								model,
 								{
@@ -12444,36 +12529,34 @@ var $author$project$ChatRoom$update = F2(
 						} else {
 							return model;
 						}
-					}(),
-					$elm$core$Platform$Cmd$none);
+					}());
 			case 'GotNewMessage':
 				var response = msg.a;
 				if (response.$ === 'Ok') {
-					var _v8 = response.a;
-					var chat_id = _v8.a;
-					var message = _v8.b;
-					return _Utils_Tuple2(
+					var _v10 = response.a;
+					var chat_id = _v10.a;
+					var message = _v10.b;
+					return $author$project$Util$pass(
 						_Utils_update(
 							model,
 							{
 								chats: $author$project$Chat$addMessage(
 									{chat_id: chat_id, chats: model.chats, msg: message})
-							}),
-						$elm$core$Platform$Cmd$none);
+							}));
 				} else {
-					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+					return $author$project$Util$pass(model);
+				}
+			case 'GotExitResponse':
+				var response = msg.a;
+				if (response.$ === 'Ok') {
+					return _Utils_Tuple2(model, $author$project$Api$emptyCache);
+				} else {
+					return $author$project$Util$pass(model);
 				}
 			default:
 				var response = msg.a;
-				return _Utils_Tuple2(
-					model,
-					function () {
-						if (response.$ === 'Ok') {
-							return $author$project$Api$emptyCache;
-						} else {
-							return $elm$core$Platform$Cmd$none;
-						}
-					}());
+				var _v12 = A2($elm$core$Debug$log, 'GotNewChat', response);
+				return $author$project$Util$pass(model);
 		}
 	});
 var $author$project$Entrance$GotResponse = function (a) {
@@ -12520,21 +12603,20 @@ var $elm$http$Http$post = function (r) {
 	return $elm$http$Http$request(
 		{body: r.body, expect: r.expect, headers: _List_Nil, method: 'POST', timeout: $elm$core$Maybe$Nothing, tracker: $elm$core$Maybe$Nothing, url: r.url});
 };
-var $author$project$Api$enter = F3(
-	function (toMsg, toViewer, value) {
-		return $elm$http$Http$post(
-			{
-				body: $elm$http$Http$jsonBody(value),
-				expect: A2(
-					$elm$http$Http$expectJson,
-					toMsg,
-					A2(
-						$elm$json$Json$Decode$andThen,
-						$author$project$Api$credToViewerDecoder(toViewer),
-						$author$project$Api$mainDecoder($author$project$Api$credDecoder))),
-				url: $author$project$Api$url_root + 'enter'
-			});
-	});
+var $author$project$Api$enter = function (request) {
+	return $elm$http$Http$post(
+		{
+			body: $elm$http$Http$jsonBody(request.value),
+			expect: A2(
+				$elm$http$Http$expectJson,
+				request.toMsg,
+				A2(
+					$elm$json$Json$Decode$andThen,
+					$author$project$Api$credToViewerDecoder(request.toViewer),
+					$author$project$Api$mainDecoder($author$project$Api$credDecoder))),
+			url: $author$project$Api$url_root + 'enter'
+		});
+};
 var $author$project$User$encode = function (user) {
 	return $elm$json$Json$Encode$object(
 		_List_fromArray(
@@ -12603,11 +12685,12 @@ var $author$project$Entrance$update = F2(
 			case 'Enter':
 				return _Utils_Tuple2(
 					model,
-					A3(
-						$author$project$Api$enter,
-						$author$project$Entrance$GotResponse,
-						$author$project$Viewer$decoder,
-						$author$project$Entrance$encode(model)));
+					$author$project$Api$enter(
+						{
+							toMsg: $author$project$Entrance$GotResponse,
+							toViewer: $author$project$Viewer$decoder,
+							value: $author$project$Entrance$encode(model)
+						}));
 			case 'ChangeEmail':
 				var email = msg.a;
 				return _Utils_Tuple2(
@@ -12653,33 +12736,43 @@ var $author$project$Main$update = F2(
 		switch (msg.$) {
 			case 'GotEntranceMsg':
 				var subMsg = msg.a;
-				if (model.$ === 'Guest') {
-					var entrance = model.a;
+				var _v1 = model.state;
+				if (_v1.$ === 'Guest') {
+					var entrance = _v1.a;
 					var _v2 = A2($author$project$Entrance$update, subMsg, entrance);
 					var subModel = _v2.a;
 					var subCmd = _v2.b;
 					return _Utils_Tuple2(
-						$author$project$Main$Guest(subModel),
+						_Utils_update(
+							model,
+							{
+								state: $author$project$Main$Guest(subModel)
+							}),
 						A2($elm$core$Platform$Cmd$map, $author$project$Main$GotEntranceMsg, subCmd));
 				} else {
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
 			case 'GotChatRoomMsg':
 				var subMsg = msg.a;
-				if (model.$ === 'User') {
-					var chatRoom = model.a;
+				var _v3 = model.state;
+				if (_v3.$ === 'User') {
+					var chatRoom = _v3.a;
 					var _v4 = A2($author$project$ChatRoom$update, subMsg, chatRoom);
 					var subModel = _v4.a;
 					var subCmd = _v4.b;
 					return _Utils_Tuple2(
-						$author$project$Main$User(subModel),
+						_Utils_update(
+							model,
+							{
+								state: $author$project$Main$User(subModel)
+							}),
 						A2($elm$core$Platform$Cmd$map, $author$project$Main$GotChatRoomMsg, subCmd));
 				} else {
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
 			default:
 				var maybeViewer = msg.a;
-				var _v5 = _Utils_Tuple2(maybeViewer, model);
+				var _v5 = _Utils_Tuple2(maybeViewer, model.state);
 				_v5$2:
 				while (true) {
 					if (_v5.a.$ === 'Nothing') {
@@ -12694,17 +12787,21 @@ var $author$project$Main$update = F2(
 							var viewer = _v5.a.a;
 							var chatRoom = _v5.b.a;
 							return _Utils_Tuple2(
-								$author$project$Main$User(
-									_Utils_update(
-										chatRoom,
-										{viewer: viewer})),
+								_Utils_update(
+									model,
+									{
+										state: $author$project$Main$User(
+											_Utils_update(
+												chatRoom,
+												{viewer: viewer}))
+									}),
 								$elm$core$Platform$Cmd$none);
 						} else {
 							break _v5$2;
 						}
 					}
 				}
-				return $author$project$Main$init(maybeViewer);
+				return A2($author$project$Main$init, model.url, maybeViewer);
 		}
 	});
 var $mdgriffith$elm_ui$Internal$Model$Colored = F3(
@@ -18293,22 +18390,57 @@ var $mdgriffith$elm_ui$Element$rgb255 = F3(
 	function (red, green, blue) {
 		return A4($mdgriffith$elm_ui$Internal$Model$Rgba, red / 255, green / 255, blue / 255, 1);
 	});
-var $mdgriffith$elm_ui$Internal$Model$Fill = function (a) {
-	return {$: 'Fill', a: a};
-};
-var $mdgriffith$elm_ui$Element$fill = $mdgriffith$elm_ui$Internal$Model$Fill(1);
 var $mdgriffith$elm_ui$Internal$Model$Height = function (a) {
 	return {$: 'Height', a: a};
 };
 var $mdgriffith$elm_ui$Element$height = $mdgriffith$elm_ui$Internal$Model$Height;
-var $mdgriffith$elm_ui$Internal$Model$AsRow = {$: 'AsRow'};
-var $mdgriffith$elm_ui$Internal$Model$asRow = $mdgriffith$elm_ui$Internal$Model$AsRow;
 var $mdgriffith$elm_ui$Internal$Model$Content = {$: 'Content'};
 var $mdgriffith$elm_ui$Element$shrink = $mdgriffith$elm_ui$Internal$Model$Content;
 var $mdgriffith$elm_ui$Internal$Model$Width = function (a) {
 	return {$: 'Width', a: a};
 };
 var $mdgriffith$elm_ui$Element$width = $mdgriffith$elm_ui$Internal$Model$Width;
+var $mdgriffith$elm_ui$Element$el = F2(
+	function (attrs, child) {
+		return A4(
+			$mdgriffith$elm_ui$Internal$Model$element,
+			$mdgriffith$elm_ui$Internal$Model$asEl,
+			$mdgriffith$elm_ui$Internal$Model$div,
+			A2(
+				$elm$core$List$cons,
+				$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$shrink),
+				A2(
+					$elm$core$List$cons,
+					$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$shrink),
+					attrs)),
+			$mdgriffith$elm_ui$Internal$Model$Unkeyed(
+				_List_fromArray(
+					[child])));
+	});
+var $mdgriffith$elm_ui$Internal$Model$Fill = function (a) {
+	return {$: 'Fill', a: a};
+};
+var $mdgriffith$elm_ui$Element$fill = $mdgriffith$elm_ui$Internal$Model$Fill(1);
+var $mdgriffith$elm_ui$Internal$Model$InFront = {$: 'InFront'};
+var $mdgriffith$elm_ui$Internal$Model$Nearby = F2(
+	function (a, b) {
+		return {$: 'Nearby', a: a, b: b};
+	});
+var $mdgriffith$elm_ui$Internal$Model$NoAttribute = {$: 'NoAttribute'};
+var $mdgriffith$elm_ui$Element$createNearby = F2(
+	function (loc, element) {
+		if (element.$ === 'Empty') {
+			return $mdgriffith$elm_ui$Internal$Model$NoAttribute;
+		} else {
+			return A2($mdgriffith$elm_ui$Internal$Model$Nearby, loc, element);
+		}
+	});
+var $mdgriffith$elm_ui$Element$inFront = function (element) {
+	return A2($mdgriffith$elm_ui$Element$createNearby, $mdgriffith$elm_ui$Internal$Model$InFront, element);
+};
+var $mdgriffith$elm_ui$Element$rgba = $mdgriffith$elm_ui$Internal$Model$Rgba;
+var $mdgriffith$elm_ui$Internal$Model$AsRow = {$: 'AsRow'};
+var $mdgriffith$elm_ui$Internal$Model$asRow = $mdgriffith$elm_ui$Internal$Model$AsRow;
 var $mdgriffith$elm_ui$Element$row = F2(
 	function (attrs, children) {
 		return A4(
@@ -18327,6 +18459,11 @@ var $mdgriffith$elm_ui$Element$row = F2(
 						attrs))),
 			$mdgriffith$elm_ui$Internal$Model$Unkeyed(children));
 	});
+var $author$project$ChatRoom$AddChat = {$: 'AddChat'};
+var $author$project$ChatRoom$ChangeEmail = function (a) {
+	return {$: 'ChangeEmail', a: a};
+};
+var $author$project$ChatRoom$NoOp = {$: 'NoOp'};
 var $mdgriffith$elm_ui$Internal$Model$AlignX = function (a) {
 	return {$: 'AlignX', a: a};
 };
@@ -18357,45 +18494,43 @@ var $mdgriffith$elm_ui$Element$column = F2(
 						attrs))),
 			$mdgriffith$elm_ui$Internal$Model$Unkeyed(children));
 	});
-var $mdgriffith$elm_ui$Element$el = F2(
-	function (attrs, child) {
-		return A4(
-			$mdgriffith$elm_ui$Internal$Model$element,
-			$mdgriffith$elm_ui$Internal$Model$asEl,
-			$mdgriffith$elm_ui$Internal$Model$div,
-			A2(
-				$elm$core$List$cons,
-				$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$shrink),
-				A2(
-					$elm$core$List$cons,
-					$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$shrink),
-					attrs)),
-			$mdgriffith$elm_ui$Internal$Model$Unkeyed(
-				_List_fromArray(
-					[child])));
+var $mdgriffith$elm_ui$Element$htmlAttribute = $mdgriffith$elm_ui$Internal$Model$Attr;
+var $elm$json$Json$Decode$fail = _Json_fail;
+var $elm$html$Html$Events$keyCode = A2($elm$json$Json$Decode$field, 'keyCode', $elm$json$Json$Decode$int);
+var $elm$virtual_dom$VirtualDom$MayPreventDefault = function (a) {
+	return {$: 'MayPreventDefault', a: a};
+};
+var $elm$html$Html$Events$preventDefaultOn = F2(
+	function (event, decoder) {
+		return A2(
+			$elm$virtual_dom$VirtualDom$on,
+			event,
+			$elm$virtual_dom$VirtualDom$MayPreventDefault(decoder));
 	});
-var $author$project$Chat$messages = function (chat) {
-	if (chat.$ === 'PersonalChat') {
-		var body = chat.a;
-		return body.messages;
-	} else {
-		var body = chat.a;
-		return body.messages;
-	}
-};
-var $author$project$Chat$selected = function (chats) {
-	if (chats.$ === 'Active') {
-		var val = chats.b;
-		return $elm$core$Maybe$Just(val);
-	} else {
-		return $elm$core$Maybe$Nothing;
-	}
-};
-var $mdgriffith$elm_ui$Element$text = function (content) {
-	return $mdgriffith$elm_ui$Internal$Model$Text(content);
-};
-var $mdgriffith$elm_ui$Internal$Model$Top = {$: 'Top'};
-var $mdgriffith$elm_ui$Element$alignTop = $mdgriffith$elm_ui$Internal$Model$AlignY($mdgriffith$elm_ui$Internal$Model$Top);
+var $author$project$Util$onEnterHandler = F2(
+	function (send, noOp) {
+		return A2(
+			$elm$html$Html$Events$preventDefaultOn,
+			'keydown',
+			A2(
+				$elm$json$Json$Decode$andThen,
+				function (keys) {
+					return (keys.code === 13) ? (keys.shift ? $elm$json$Json$Decode$succeed(
+						_Utils_Tuple2(noOp, false)) : ((keys.ctrl || keys.alt) ? $elm$json$Json$Decode$succeed(
+						_Utils_Tuple2(noOp, true)) : $elm$json$Json$Decode$succeed(
+						_Utils_Tuple2(send, true)))) : $elm$json$Json$Decode$fail('Not Enter Key');
+				},
+				A5(
+					$elm$json$Json$Decode$map4,
+					F4(
+						function (key, shift, ctrl, alt) {
+							return {alt: alt, code: key, ctrl: ctrl, shift: shift};
+						}),
+					$elm$html$Html$Events$keyCode,
+					A2($elm$json$Json$Decode$field, 'shiftKey', $elm$json$Json$Decode$bool),
+					A2($elm$json$Json$Decode$field, 'ctrlKey', $elm$json$Json$Decode$bool),
+					A2($elm$json$Json$Decode$field, 'altKey', $elm$json$Json$Decode$bool))));
+	});
 var $mdgriffith$elm_ui$Internal$Model$PaddingStyle = F5(
 	function (a, b, c, d, e) {
 		return {$: 'PaddingStyle', a: a, b: b, c: c, d: d, e: e};
@@ -18413,11 +18548,41 @@ var $mdgriffith$elm_ui$Element$padding = function (x) {
 			x,
 			x));
 };
-var $mdgriffith$elm_ui$Internal$Model$Px = function (a) {
-	return {$: 'Px', a: a};
+var $mdgriffith$elm_ui$Internal$Flag$borderRound = $mdgriffith$elm_ui$Internal$Flag$flag(17);
+var $mdgriffith$elm_ui$Element$Border$rounded = function (radius) {
+	return A2(
+		$mdgriffith$elm_ui$Internal$Model$StyleClass,
+		$mdgriffith$elm_ui$Internal$Flag$borderRound,
+		A3(
+			$mdgriffith$elm_ui$Internal$Model$Single,
+			'br-' + $elm$core$String$fromInt(radius),
+			'border-radius',
+			$elm$core$String$fromInt(radius) + 'px'));
 };
-var $mdgriffith$elm_ui$Element$px = $mdgriffith$elm_ui$Internal$Model$Px;
-var $mdgriffith$elm_ui$Element$rgba = $mdgriffith$elm_ui$Internal$Model$Rgba;
+var $mdgriffith$elm_ui$Internal$Model$boxShadowClass = function (shadow) {
+	return $elm$core$String$concat(
+		_List_fromArray(
+			[
+				shadow.inset ? 'box-inset' : 'box-',
+				$mdgriffith$elm_ui$Internal$Model$floatClass(shadow.offset.a) + 'px',
+				$mdgriffith$elm_ui$Internal$Model$floatClass(shadow.offset.b) + 'px',
+				$mdgriffith$elm_ui$Internal$Model$floatClass(shadow.blur) + 'px',
+				$mdgriffith$elm_ui$Internal$Model$floatClass(shadow.size) + 'px',
+				$mdgriffith$elm_ui$Internal$Model$formatColorClass(shadow.color)
+			]));
+};
+var $mdgriffith$elm_ui$Internal$Flag$shadows = $mdgriffith$elm_ui$Internal$Flag$flag(19);
+var $mdgriffith$elm_ui$Element$Border$shadow = function (almostShade) {
+	var shade = {blur: almostShade.blur, color: almostShade.color, inset: false, offset: almostShade.offset, size: almostShade.size};
+	return A2(
+		$mdgriffith$elm_ui$Internal$Model$StyleClass,
+		$mdgriffith$elm_ui$Internal$Flag$shadows,
+		A3(
+			$mdgriffith$elm_ui$Internal$Model$Single,
+			$mdgriffith$elm_ui$Internal$Model$boxShadowClass(shade),
+			'box-shadow',
+			$mdgriffith$elm_ui$Internal$Model$formatBoxShadow(shade)));
+};
 var $mdgriffith$elm_ui$Internal$Model$SpacingStyle = F3(
 	function (a, b, c) {
 		return {$: 'SpacingStyle', a: a, b: b, c: c};
@@ -18437,408 +18602,211 @@ var $mdgriffith$elm_ui$Element$spacing = function (x) {
 			x,
 			x));
 };
-var $author$project$Chat$title = function (chat) {
-	if (chat.$ === 'PersonalChat') {
-		var body = chat.a;
-		return A2($elm$core$Maybe$withDefault, 'No Name', body.recipient.userName);
-	} else {
-		var body = chat.a;
-		return A2($elm$core$Maybe$withDefault, 'Untitled', body.name);
-	}
-};
+var $elm$core$Basics$atan = _Basics_atan;
 var $mdgriffith$elm_ui$Internal$Model$Class = F2(
 	function (a, b) {
 		return {$: 'Class', a: a, b: b};
 	});
-var $mdgriffith$elm_ui$Internal$Flag$overflow = $mdgriffith$elm_ui$Internal$Flag$flag(20);
-var $mdgriffith$elm_ui$Element$clip = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$overflow, $mdgriffith$elm_ui$Internal$Style$classes.clip);
-var $mdgriffith$elm_ui$Internal$Flag$borderColor = $mdgriffith$elm_ui$Internal$Flag$flag(28);
-var $mdgriffith$elm_ui$Element$Border$color = function (clr) {
+var $mdgriffith$elm_ui$Internal$Flag$fontWeight = $mdgriffith$elm_ui$Internal$Flag$flag(13);
+var $mdgriffith$elm_ui$Element$Font$bold = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontWeight, $mdgriffith$elm_ui$Internal$Style$classes.bold);
+var $mdgriffith$elm_ui$Element$Font$color = function (fontColor) {
 	return A2(
 		$mdgriffith$elm_ui$Internal$Model$StyleClass,
-		$mdgriffith$elm_ui$Internal$Flag$borderColor,
+		$mdgriffith$elm_ui$Internal$Flag$fontColor,
 		A3(
 			$mdgriffith$elm_ui$Internal$Model$Colored,
-			'bc-' + $mdgriffith$elm_ui$Internal$Model$formatColorClass(clr),
-			'border-color',
-			clr));
+			'fc-' + $mdgriffith$elm_ui$Internal$Model$formatColorClass(fontColor),
+			'color',
+			fontColor));
 };
-var $mdgriffith$elm_ui$Internal$Model$MoveY = function (a) {
-	return {$: 'MoveY', a: a};
-};
-var $mdgriffith$elm_ui$Internal$Model$TransformComponent = F2(
-	function (a, b) {
-		return {$: 'TransformComponent', a: a, b: b};
-	});
-var $mdgriffith$elm_ui$Internal$Flag$moveY = $mdgriffith$elm_ui$Internal$Flag$flag(26);
-var $mdgriffith$elm_ui$Element$moveDown = function (y) {
-	return A2(
-		$mdgriffith$elm_ui$Internal$Model$TransformComponent,
-		$mdgriffith$elm_ui$Internal$Flag$moveY,
-		$mdgriffith$elm_ui$Internal$Model$MoveY(y));
-};
-var $mdgriffith$elm_ui$Element$moveUp = function (y) {
-	return A2(
-		$mdgriffith$elm_ui$Internal$Model$TransformComponent,
-		$mdgriffith$elm_ui$Internal$Flag$moveY,
-		$mdgriffith$elm_ui$Internal$Model$MoveY(-y));
-};
-var $mdgriffith$elm_ui$Element$none = $mdgriffith$elm_ui$Internal$Model$Empty;
-var $mdgriffith$elm_ui$Internal$Flag$borderRound = $mdgriffith$elm_ui$Internal$Flag$flag(17);
-var $mdgriffith$elm_ui$Element$Border$rounded = function (radius) {
-	return A2(
-		$mdgriffith$elm_ui$Internal$Model$StyleClass,
-		$mdgriffith$elm_ui$Internal$Flag$borderRound,
-		A3(
-			$mdgriffith$elm_ui$Internal$Model$Single,
-			'br-' + $elm$core$String$fromInt(radius),
-			'border-radius',
-			$elm$core$String$fromInt(radius) + 'px'));
-};
-var $mdgriffith$elm_ui$Internal$Model$BorderWidth = F5(
-	function (a, b, c, d, e) {
-		return {$: 'BorderWidth', a: a, b: b, c: c, d: d, e: e};
-	});
-var $mdgriffith$elm_ui$Element$Border$width = function (v) {
-	return A2(
-		$mdgriffith$elm_ui$Internal$Model$StyleClass,
-		$mdgriffith$elm_ui$Internal$Flag$borderWidth,
-		A5(
-			$mdgriffith$elm_ui$Internal$Model$BorderWidth,
-			'b-' + $elm$core$String$fromInt(v),
-			v,
-			v,
-			v,
-			v));
-};
-var $author$project$ChatRoom$viewAvatar = function (open) {
-	return A2(
-		$mdgriffith$elm_ui$Element$el,
-		_List_fromArray(
-			[
-				$mdgriffith$elm_ui$Element$width(
-				$mdgriffith$elm_ui$Element$px(48)),
-				$mdgriffith$elm_ui$Element$height(
-				$mdgriffith$elm_ui$Element$px(48)),
-				$mdgriffith$elm_ui$Element$Border$rounded(24),
-				$mdgriffith$elm_ui$Element$Background$color(
-				A3($mdgriffith$elm_ui$Element$rgb255, 236, 240, 243)),
-				$mdgriffith$elm_ui$Element$clip
-			]),
-		A2(
-			$mdgriffith$elm_ui$Element$el,
-			_List_fromArray(
-				[
-					$mdgriffith$elm_ui$Element$width(
-					$mdgriffith$elm_ui$Element$px(64)),
-					$mdgriffith$elm_ui$Element$height(
-					$mdgriffith$elm_ui$Element$px(64)),
-					$mdgriffith$elm_ui$Element$centerX,
-					$mdgriffith$elm_ui$Element$centerY,
-					$mdgriffith$elm_ui$Element$Border$rounded(36),
-					$mdgriffith$elm_ui$Element$moveDown(32),
-					$mdgriffith$elm_ui$Element$Background$color(
-					A3($mdgriffith$elm_ui$Element$rgb255, 222, 150, 45))
-				]),
-			A2(
-				$mdgriffith$elm_ui$Element$el,
-				_List_fromArray(
-					[
-						$mdgriffith$elm_ui$Element$width(
-						$mdgriffith$elm_ui$Element$px(32)),
-						$mdgriffith$elm_ui$Element$height(
-						$mdgriffith$elm_ui$Element$px(32)),
-						$mdgriffith$elm_ui$Element$centerX,
-						$mdgriffith$elm_ui$Element$centerY,
-						$mdgriffith$elm_ui$Element$Border$rounded(16),
-						$mdgriffith$elm_ui$Element$Border$color(
-						A3($mdgriffith$elm_ui$Element$rgb255, 236, 240, 243)),
-						$mdgriffith$elm_ui$Element$Border$width(2),
-						$mdgriffith$elm_ui$Element$moveUp(
-						open ? 48 : 42),
-						$mdgriffith$elm_ui$Element$Background$color(
-						A3($mdgriffith$elm_ui$Element$rgb255, 222, 150, 45))
-					]),
-				$mdgriffith$elm_ui$Element$none)));
-};
-var $author$project$ChatRoom$viewChatToolBar = function (chat) {
-	return A2(
-		$mdgriffith$elm_ui$Element$row,
-		_List_fromArray(
-			[
-				$mdgriffith$elm_ui$Element$alignTop,
-				$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-				$mdgriffith$elm_ui$Element$height(
-				$mdgriffith$elm_ui$Element$px(72)),
-				$mdgriffith$elm_ui$Element$Background$color(
-				A4($mdgriffith$elm_ui$Element$rgba, 0, 0, 0, 0.05)),
-				$mdgriffith$elm_ui$Element$padding(12),
-				$mdgriffith$elm_ui$Element$spacing(12)
-			]),
-		_List_fromArray(
-			[
-				$author$project$ChatRoom$viewAvatar(true),
-				$mdgriffith$elm_ui$Element$text(
-				$author$project$Chat$title(chat))
-			]));
-};
-var $mdgriffith$elm_ui$Internal$Model$Bottom = {$: 'Bottom'};
-var $mdgriffith$elm_ui$Element$alignBottom = $mdgriffith$elm_ui$Internal$Model$AlignY($mdgriffith$elm_ui$Internal$Model$Bottom);
-var $mdgriffith$elm_ui$Internal$Model$Left = {$: 'Left'};
-var $mdgriffith$elm_ui$Element$alignLeft = $mdgriffith$elm_ui$Internal$Model$AlignX($mdgriffith$elm_ui$Internal$Model$Left);
-var $mdgriffith$elm_ui$Internal$Model$Right = {$: 'Right'};
-var $mdgriffith$elm_ui$Element$alignRight = $mdgriffith$elm_ui$Internal$Model$AlignX($mdgriffith$elm_ui$Internal$Model$Right);
-var $author$project$Message$body = function (message) {
-	if (message.$ === 'Confirmed') {
-		var msg = message.a;
-		return msg.body;
+var $mdgriffith$elm_ui$Internal$Flag$bgGradient = $mdgriffith$elm_ui$Internal$Flag$flag(10);
+var $mdgriffith$elm_ui$Element$Background$gradient = function (_v0) {
+	var angle = _v0.angle;
+	var steps = _v0.steps;
+	if (!steps.b) {
+		return $mdgriffith$elm_ui$Internal$Model$NoAttribute;
 	} else {
-		var msg = message.a;
-		return msg.body;
+		if (!steps.b.b) {
+			var clr = steps.a;
+			return A2(
+				$mdgriffith$elm_ui$Internal$Model$StyleClass,
+				$mdgriffith$elm_ui$Internal$Flag$bgColor,
+				A3(
+					$mdgriffith$elm_ui$Internal$Model$Colored,
+					'bg-' + $mdgriffith$elm_ui$Internal$Model$formatColorClass(clr),
+					'background-color',
+					clr));
+		} else {
+			return A2(
+				$mdgriffith$elm_ui$Internal$Model$StyleClass,
+				$mdgriffith$elm_ui$Internal$Flag$bgGradient,
+				A3(
+					$mdgriffith$elm_ui$Internal$Model$Single,
+					'bg-grad-' + A2(
+						$elm$core$String$join,
+						'-',
+						A2(
+							$elm$core$List$cons,
+							$mdgriffith$elm_ui$Internal$Model$floatClass(angle),
+							A2($elm$core$List$map, $mdgriffith$elm_ui$Internal$Model$formatColorClass, steps))),
+					'background-image',
+					'linear-gradient(' + (A2(
+						$elm$core$String$join,
+						', ',
+						A2(
+							$elm$core$List$cons,
+							$elm$core$String$fromFloat(angle) + 'rad',
+							A2($elm$core$List$map, $mdgriffith$elm_ui$Internal$Model$formatColor, steps))) + ')')));
+		}
 	}
 };
-var $mdgriffith$elm_ui$Internal$Model$Max = F2(
-	function (a, b) {
-		return {$: 'Max', a: a, b: b};
-	});
-var $mdgriffith$elm_ui$Element$maximum = F2(
-	function (i, l) {
-		return A2($mdgriffith$elm_ui$Internal$Model$Max, i, l);
-	});
-var $author$project$Message$sender = function (message) {
-	if (message.$ === 'Confirmed') {
-		var msg = message.a;
-		return msg.sender;
-	} else {
-		var msg = message.a;
-		return msg.sender;
-	}
+var $elm$core$Basics$modBy = _Basics_modBy;
+var $mdgriffith$elm_ui$Element$Events$onMouseUp = A2($elm$core$Basics$composeL, $mdgriffith$elm_ui$Internal$Model$Attr, $elm$html$Html$Events$onMouseUp);
+var $mdgriffith$elm_ui$Internal$Flag$cursor = $mdgriffith$elm_ui$Internal$Flag$flag(21);
+var $mdgriffith$elm_ui$Element$pointer = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$cursor, $mdgriffith$elm_ui$Internal$Style$classes.cursorPointer);
+var $mdgriffith$elm_ui$Internal$Model$Px = function (a) {
+	return {$: 'Px', a: a};
 };
+var $mdgriffith$elm_ui$Element$px = $mdgriffith$elm_ui$Internal$Model$Px;
+var $mdgriffith$elm_ui$Element$rgb = F3(
+	function (r, g, b) {
+		return A4($mdgriffith$elm_ui$Internal$Model$Rgba, r, g, b, 1);
+	});
 var $mdgriffith$elm_ui$Element$Font$size = function (i) {
 	return A2(
 		$mdgriffith$elm_ui$Internal$Model$StyleClass,
 		$mdgriffith$elm_ui$Internal$Flag$fontSize,
 		$mdgriffith$elm_ui$Internal$Model$FontSize(i));
 };
-var $mdgriffith$elm_ui$Element$htmlAttribute = $mdgriffith$elm_ui$Internal$Model$Attr;
-var $mdgriffith$elm_ui$Internal$Model$Describe = function (a) {
-	return {$: 'Describe', a: a};
+var $mdgriffith$elm_ui$Element$text = function (content) {
+	return $mdgriffith$elm_ui$Internal$Model$Text(content);
 };
-var $mdgriffith$elm_ui$Internal$Model$Paragraph = {$: 'Paragraph'};
-var $mdgriffith$elm_ui$Element$paragraph = F2(
-	function (attrs, children) {
-		return A4(
-			$mdgriffith$elm_ui$Internal$Model$element,
-			$mdgriffith$elm_ui$Internal$Model$asParagraph,
-			$mdgriffith$elm_ui$Internal$Model$div,
-			A2(
-				$elm$core$List$cons,
-				$mdgriffith$elm_ui$Internal$Model$Describe($mdgriffith$elm_ui$Internal$Model$Paragraph),
-				A2(
-					$elm$core$List$cons,
-					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-					A2(
-						$elm$core$List$cons,
-						$mdgriffith$elm_ui$Element$spacing(5),
-						attrs))),
-			$mdgriffith$elm_ui$Internal$Model$Unkeyed(children));
-	});
-var $author$project$Message$viewText = function (msg) {
+var $author$project$Layout$viewPrimaryBtn = function (config) {
+	var _v0 = config.size;
+	var x = _v0.a;
+	var y = _v0.b;
+	var angle = $elm$core$Basics$atan(x / y);
+	var size = (!A2($elm$core$Basics$modBy, y, 2)) ? $elm$core$Basics$round(y / 2) : ($elm$core$Basics$round(y / 2) + 1);
 	return A2(
-		$mdgriffith$elm_ui$Element$column,
+		$mdgriffith$elm_ui$Element$el,
 		_List_fromArray(
 			[
-				$mdgriffith$elm_ui$Element$spacing(4)
+				$mdgriffith$elm_ui$Element$width(
+				$mdgriffith$elm_ui$Element$px(x)),
+				$mdgriffith$elm_ui$Element$height(
+				$mdgriffith$elm_ui$Element$px(y)),
+				$mdgriffith$elm_ui$Element$Border$rounded(size),
+				$mdgriffith$elm_ui$Element$Background$gradient(
+				{
+					angle: angle,
+					steps: _List_fromArray(
+						[
+							A3($mdgriffith$elm_ui$Element$rgb255, 150, 20, 200),
+							A3($mdgriffith$elm_ui$Element$rgb255, 75, 25, 225)
+						])
+				}),
+				$mdgriffith$elm_ui$Element$Events$onMouseUp(config.msg),
+				$mdgriffith$elm_ui$Element$pointer
 			]),
 		A2(
-			$elm$core$List$map,
-			function (m) {
-				return A2(
-					$mdgriffith$elm_ui$Element$paragraph,
-					_List_fromArray(
-						[
-							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-							$mdgriffith$elm_ui$Element$spacing(4),
-							$mdgriffith$elm_ui$Element$htmlAttribute(
-							A2($elm$html$Html$Attributes$style, 'overflow-wrap', 'break-word'))
-						]),
-					_List_fromArray(
-						[
-							$mdgriffith$elm_ui$Element$text(m)
-						]));
-			},
-			A2($elm$core$String$split, '\n', msg)));
-};
-var $author$project$Message$view = F2(
-	function (msg, from) {
-		return A2(
 			$mdgriffith$elm_ui$Element$el,
 			_List_fromArray(
 				[
-					$mdgriffith$elm_ui$Element$width(
-					A2($mdgriffith$elm_ui$Element$maximum, 640, $mdgriffith$elm_ui$Element$shrink)),
-					$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$shrink),
-					$mdgriffith$elm_ui$Element$alignBottom,
-					$mdgriffith$elm_ui$Element$padding(12),
-					$mdgriffith$elm_ui$Element$Background$color(
-					A3($mdgriffith$elm_ui$Element$rgb255, 209, 220, 231)),
-					$mdgriffith$elm_ui$Element$Border$rounded(8),
-					$mdgriffith$elm_ui$Element$Border$color(
-					A3($mdgriffith$elm_ui$Element$rgb255, 231, 101, 58)),
-					$mdgriffith$elm_ui$Element$Font$size(16),
-					_Utils_eq(
-					from,
-					$author$project$Message$sender(msg)) ? $mdgriffith$elm_ui$Element$alignRight : $mdgriffith$elm_ui$Element$alignLeft,
-					function () {
-					if (msg.$ === 'Pending') {
-						return $mdgriffith$elm_ui$Element$Border$width(2);
-					} else {
-						return $mdgriffith$elm_ui$Element$Border$width(0);
-					}
-				}()
+					$mdgriffith$elm_ui$Element$centerX,
+					$mdgriffith$elm_ui$Element$centerY,
+					$mdgriffith$elm_ui$Element$Font$color(
+					A3($mdgriffith$elm_ui$Element$rgb, 1, 1, 1)),
+					$mdgriffith$elm_ui$Element$Font$bold,
+					$mdgriffith$elm_ui$Element$Font$size(size)
 				]),
-			$author$project$Message$viewText(
-				$author$project$Message$body(msg)));
-	});
-var $author$project$ChatRoom$viewMessages = F2(
-	function (msgList, user) {
-		return A2(
-			$mdgriffith$elm_ui$Element$column,
-			_List_fromArray(
-				[
-					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-					$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
-					$mdgriffith$elm_ui$Element$padding(24),
-					$mdgriffith$elm_ui$Element$spacing(12)
-				]),
+			$mdgriffith$elm_ui$Element$text(config.text)));
+};
+var $author$project$ChatRoom$viewAddBtn = A2(
+	$mdgriffith$elm_ui$Element$el,
+	_List_fromArray(
+		[$mdgriffith$elm_ui$Element$centerX]),
+	$author$project$Layout$viewPrimaryBtn(
+		{
+			msg: $author$project$ChatRoom$AddChat,
+			size: _Utils_Tuple2(100, 48),
+			text: 'Add'
+		}));
+var $author$project$ChatRoom$ToggleDialogBox = function (a) {
+	return {$: 'ToggleDialogBox', a: a};
+};
+var $mdgriffith$elm_ui$Internal$Model$Right = {$: 'Right'};
+var $mdgriffith$elm_ui$Element$alignRight = $mdgriffith$elm_ui$Internal$Model$AlignX($mdgriffith$elm_ui$Internal$Model$Right);
+var $mdgriffith$elm_ui$Internal$Model$Top = {$: 'Top'};
+var $mdgriffith$elm_ui$Element$alignTop = $mdgriffith$elm_ui$Internal$Model$AlignY($mdgriffith$elm_ui$Internal$Model$Top);
+var $elm$html$Html$Attributes$alt = $elm$html$Html$Attributes$stringProperty('alt');
+var $elm$html$Html$Attributes$src = function (url) {
+	return A2(
+		$elm$html$Html$Attributes$stringProperty,
+		'src',
+		_VirtualDom_noJavaScriptOrHtmlUri(url));
+};
+var $mdgriffith$elm_ui$Element$image = F2(
+	function (attrs, _v0) {
+		var src = _v0.src;
+		var description = _v0.description;
+		var imageAttributes = A2(
+			$elm$core$List$filter,
+			function (a) {
+				switch (a.$) {
+					case 'Width':
+						return true;
+					case 'Height':
+						return true;
+					default:
+						return false;
+				}
+			},
+			attrs);
+		return A4(
+			$mdgriffith$elm_ui$Internal$Model$element,
+			$mdgriffith$elm_ui$Internal$Model$asEl,
+			$mdgriffith$elm_ui$Internal$Model$div,
 			A2(
-				$elm$core$List$map,
-				function (msg) {
-					return A2($author$project$Message$view, msg, user);
-				},
-				msgList));
+				$elm$core$List$cons,
+				$mdgriffith$elm_ui$Internal$Model$htmlClass($mdgriffith$elm_ui$Internal$Style$classes.imageContainer),
+				attrs),
+			$mdgriffith$elm_ui$Internal$Model$Unkeyed(
+				_List_fromArray(
+					[
+						A4(
+						$mdgriffith$elm_ui$Internal$Model$element,
+						$mdgriffith$elm_ui$Internal$Model$asEl,
+						$mdgriffith$elm_ui$Internal$Model$NodeName('img'),
+						_Utils_ap(
+							_List_fromArray(
+								[
+									$mdgriffith$elm_ui$Internal$Model$Attr(
+									$elm$html$Html$Attributes$src(src)),
+									$mdgriffith$elm_ui$Internal$Model$Attr(
+									$elm$html$Html$Attributes$alt(description))
+								]),
+							imageAttributes),
+						$mdgriffith$elm_ui$Internal$Model$Unkeyed(_List_Nil))
+					])));
 	});
-var $author$project$ChatRoom$ChangText = function (a) {
-	return {$: 'ChangText', a: a};
+var $author$project$ChatRoom$viewCloseDialogBox = A2(
+	$mdgriffith$elm_ui$Element$image,
+	_List_fromArray(
+		[
+			$mdgriffith$elm_ui$Element$alignRight,
+			$mdgriffith$elm_ui$Element$alignTop,
+			$mdgriffith$elm_ui$Element$pointer,
+			$mdgriffith$elm_ui$Element$Events$onMouseUp(
+			$author$project$ChatRoom$ToggleDialogBox($elm$core$Maybe$Nothing))
+		]),
+	{description: 'X', src: '/assets/close-24px.svg'});
+var $mdgriffith$elm_ui$Element$Input$TextInputNode = function (a) {
+	return {$: 'TextInputNode', a: a};
 };
-var $author$project$ChatRoom$NoOp = {$: 'NoOp'};
-var $author$project$ChatRoom$SendMessage = {$: 'SendMessage'};
-var $mdgriffith$elm_ui$Internal$Model$Focus = {$: 'Focus'};
-var $mdgriffith$elm_ui$Internal$Model$PseudoSelector = F2(
-	function (a, b) {
-		return {$: 'PseudoSelector', a: a, b: b};
-	});
-var $mdgriffith$elm_ui$Internal$Flag$focus = $mdgriffith$elm_ui$Internal$Flag$flag(31);
-var $mdgriffith$elm_ui$Internal$Model$Nearby = F2(
-	function (a, b) {
-		return {$: 'Nearby', a: a, b: b};
-	});
-var $mdgriffith$elm_ui$Internal$Model$NoAttribute = {$: 'NoAttribute'};
-var $elm$virtual_dom$VirtualDom$mapAttribute = _VirtualDom_mapAttribute;
-var $mdgriffith$elm_ui$Internal$Model$mapAttrFromStyle = F2(
-	function (fn, attr) {
-		switch (attr.$) {
-			case 'NoAttribute':
-				return $mdgriffith$elm_ui$Internal$Model$NoAttribute;
-			case 'Describe':
-				var description = attr.a;
-				return $mdgriffith$elm_ui$Internal$Model$Describe(description);
-			case 'AlignX':
-				var x = attr.a;
-				return $mdgriffith$elm_ui$Internal$Model$AlignX(x);
-			case 'AlignY':
-				var y = attr.a;
-				return $mdgriffith$elm_ui$Internal$Model$AlignY(y);
-			case 'Width':
-				var x = attr.a;
-				return $mdgriffith$elm_ui$Internal$Model$Width(x);
-			case 'Height':
-				var x = attr.a;
-				return $mdgriffith$elm_ui$Internal$Model$Height(x);
-			case 'Class':
-				var x = attr.a;
-				var y = attr.b;
-				return A2($mdgriffith$elm_ui$Internal$Model$Class, x, y);
-			case 'StyleClass':
-				var flag = attr.a;
-				var style = attr.b;
-				return A2($mdgriffith$elm_ui$Internal$Model$StyleClass, flag, style);
-			case 'Nearby':
-				var location = attr.a;
-				var elem = attr.b;
-				return A2(
-					$mdgriffith$elm_ui$Internal$Model$Nearby,
-					location,
-					A2($mdgriffith$elm_ui$Internal$Model$map, fn, elem));
-			case 'Attr':
-				var htmlAttr = attr.a;
-				return $mdgriffith$elm_ui$Internal$Model$Attr(
-					A2($elm$virtual_dom$VirtualDom$mapAttribute, fn, htmlAttr));
-			default:
-				var fl = attr.a;
-				var trans = attr.b;
-				return A2($mdgriffith$elm_ui$Internal$Model$TransformComponent, fl, trans);
-		}
-	});
-var $mdgriffith$elm_ui$Internal$Model$removeNever = function (style) {
-	return A2($mdgriffith$elm_ui$Internal$Model$mapAttrFromStyle, $elm$core$Basics$never, style);
-};
-var $mdgriffith$elm_ui$Internal$Model$unwrapDecsHelper = F2(
-	function (attr, _v0) {
-		var styles = _v0.a;
-		var trans = _v0.b;
-		var _v1 = $mdgriffith$elm_ui$Internal$Model$removeNever(attr);
-		switch (_v1.$) {
-			case 'StyleClass':
-				var style = _v1.b;
-				return _Utils_Tuple2(
-					A2($elm$core$List$cons, style, styles),
-					trans);
-			case 'TransformComponent':
-				var flag = _v1.a;
-				var component = _v1.b;
-				return _Utils_Tuple2(
-					styles,
-					A2($mdgriffith$elm_ui$Internal$Model$composeTransformation, trans, component));
-			default:
-				return _Utils_Tuple2(styles, trans);
-		}
-	});
-var $mdgriffith$elm_ui$Internal$Model$unwrapDecorations = function (attrs) {
-	var _v0 = A3(
-		$elm$core$List$foldl,
-		$mdgriffith$elm_ui$Internal$Model$unwrapDecsHelper,
-		_Utils_Tuple2(_List_Nil, $mdgriffith$elm_ui$Internal$Model$Untransformed),
-		attrs);
-	var styles = _v0.a;
-	var transform = _v0.b;
-	return A2(
-		$elm$core$List$cons,
-		$mdgriffith$elm_ui$Internal$Model$Transform(transform),
-		styles);
-};
-var $mdgriffith$elm_ui$Element$focused = function (decs) {
-	return A2(
-		$mdgriffith$elm_ui$Internal$Model$StyleClass,
-		$mdgriffith$elm_ui$Internal$Flag$focus,
-		A2(
-			$mdgriffith$elm_ui$Internal$Model$PseudoSelector,
-			$mdgriffith$elm_ui$Internal$Model$Focus,
-			$mdgriffith$elm_ui$Internal$Model$unwrapDecorations(decs)));
-};
-var $mdgriffith$elm_ui$Element$Input$HiddenLabel = function (a) {
-	return {$: 'HiddenLabel', a: a};
-};
-var $mdgriffith$elm_ui$Element$Input$labelHidden = $mdgriffith$elm_ui$Element$Input$HiddenLabel;
-var $mdgriffith$elm_ui$Internal$Model$Min = F2(
-	function (a, b) {
-		return {$: 'Min', a: a, b: b};
-	});
-var $mdgriffith$elm_ui$Element$minimum = F2(
-	function (i, l) {
-		return A2($mdgriffith$elm_ui$Internal$Model$Min, i, l);
-	});
 var $mdgriffith$elm_ui$Element$Input$TextArea = {$: 'TextArea'};
+var $mdgriffith$elm_ui$Internal$Model$Describe = function (a) {
+	return {$: 'Describe', a: a};
+};
 var $mdgriffith$elm_ui$Internal$Model$LivePolite = {$: 'LivePolite'};
 var $mdgriffith$elm_ui$Element$Region$announce = $mdgriffith$elm_ui$Internal$Model$Describe($mdgriffith$elm_ui$Internal$Model$LivePolite);
 var $mdgriffith$elm_ui$Element$Input$applyLabel = F3(
@@ -18911,16 +18879,22 @@ var $mdgriffith$elm_ui$Element$Input$autofill = A2(
 	$mdgriffith$elm_ui$Internal$Model$Attr,
 	$elm$html$Html$Attributes$attribute('autocomplete'));
 var $mdgriffith$elm_ui$Internal$Model$Behind = {$: 'Behind'};
-var $mdgriffith$elm_ui$Element$createNearby = F2(
-	function (loc, element) {
-		if (element.$ === 'Empty') {
-			return $mdgriffith$elm_ui$Internal$Model$NoAttribute;
-		} else {
-			return A2($mdgriffith$elm_ui$Internal$Model$Nearby, loc, element);
-		}
-	});
 var $mdgriffith$elm_ui$Element$behindContent = function (element) {
 	return A2($mdgriffith$elm_ui$Element$createNearby, $mdgriffith$elm_ui$Internal$Model$Behind, element);
+};
+var $mdgriffith$elm_ui$Internal$Model$MoveY = function (a) {
+	return {$: 'MoveY', a: a};
+};
+var $mdgriffith$elm_ui$Internal$Model$TransformComponent = F2(
+	function (a, b) {
+		return {$: 'TransformComponent', a: a, b: b};
+	});
+var $mdgriffith$elm_ui$Internal$Flag$moveY = $mdgriffith$elm_ui$Internal$Flag$flag(26);
+var $mdgriffith$elm_ui$Element$moveUp = function (y) {
+	return A2(
+		$mdgriffith$elm_ui$Internal$Model$TransformComponent,
+		$mdgriffith$elm_ui$Internal$Flag$moveY,
+		$mdgriffith$elm_ui$Internal$Model$MoveY(-y));
 };
 var $mdgriffith$elm_ui$Element$Input$calcMoveToCompensateForPadding = function (attrs) {
 	var gatherSpacing = F2(
@@ -18947,11 +18921,19 @@ var $mdgriffith$elm_ui$Element$Input$calcMoveToCompensateForPadding = function (
 			$elm$core$Basics$floor(vSpace / 2));
 	}
 };
-var $mdgriffith$elm_ui$Internal$Flag$cursor = $mdgriffith$elm_ui$Internal$Flag$flag(21);
-var $mdgriffith$elm_ui$Element$rgb = F3(
-	function (r, g, b) {
-		return A4($mdgriffith$elm_ui$Internal$Model$Rgba, r, g, b, 1);
-	});
+var $mdgriffith$elm_ui$Internal$Flag$overflow = $mdgriffith$elm_ui$Internal$Flag$flag(20);
+var $mdgriffith$elm_ui$Element$clip = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$overflow, $mdgriffith$elm_ui$Internal$Style$classes.clip);
+var $mdgriffith$elm_ui$Internal$Flag$borderColor = $mdgriffith$elm_ui$Internal$Flag$flag(28);
+var $mdgriffith$elm_ui$Element$Border$color = function (clr) {
+	return A2(
+		$mdgriffith$elm_ui$Internal$Model$StyleClass,
+		$mdgriffith$elm_ui$Internal$Flag$borderColor,
+		A3(
+			$mdgriffith$elm_ui$Internal$Model$Colored,
+			'bc-' + $mdgriffith$elm_ui$Internal$Model$formatColorClass(clr),
+			'border-color',
+			clr));
+};
 var $mdgriffith$elm_ui$Element$Input$darkGrey = A3($mdgriffith$elm_ui$Element$rgb, 186 / 255, 189 / 255, 182 / 255);
 var $mdgriffith$elm_ui$Element$paddingXY = F2(
 	function (x, y) {
@@ -18977,6 +18959,22 @@ var $mdgriffith$elm_ui$Element$paddingXY = F2(
 	});
 var $mdgriffith$elm_ui$Element$Input$defaultTextPadding = A2($mdgriffith$elm_ui$Element$paddingXY, 12, 12);
 var $mdgriffith$elm_ui$Element$Input$white = A3($mdgriffith$elm_ui$Element$rgb, 1, 1, 1);
+var $mdgriffith$elm_ui$Internal$Model$BorderWidth = F5(
+	function (a, b, c, d, e) {
+		return {$: 'BorderWidth', a: a, b: b, c: c, d: d, e: e};
+	});
+var $mdgriffith$elm_ui$Element$Border$width = function (v) {
+	return A2(
+		$mdgriffith$elm_ui$Internal$Model$StyleClass,
+		$mdgriffith$elm_ui$Internal$Flag$borderWidth,
+		A5(
+			$mdgriffith$elm_ui$Internal$Model$BorderWidth,
+			'b-' + $elm$core$String$fromInt(v),
+			v,
+			v,
+			v,
+			v));
+};
 var $mdgriffith$elm_ui$Element$Input$defaultTextBoxStyle = _List_fromArray(
 	[
 		$mdgriffith$elm_ui$Element$Input$defaultTextPadding,
@@ -19016,10 +19014,6 @@ var $mdgriffith$elm_ui$Element$Input$hiddenLabelAttribute = function (label) {
 	} else {
 		return $mdgriffith$elm_ui$Internal$Model$NoAttribute;
 	}
-};
-var $mdgriffith$elm_ui$Internal$Model$InFront = {$: 'InFront'};
-var $mdgriffith$elm_ui$Element$inFront = function (element) {
-	return A2($mdgriffith$elm_ui$Element$createNearby, $mdgriffith$elm_ui$Internal$Model$InFront, element);
 };
 var $mdgriffith$elm_ui$Element$Input$isConstrained = function (len) {
 	isConstrained:
@@ -19373,16 +19367,6 @@ var $mdgriffith$elm_ui$Element$alpha = function (o) {
 			transparency));
 };
 var $mdgriffith$elm_ui$Element$Input$charcoal = A3($mdgriffith$elm_ui$Element$rgb, 136 / 255, 138 / 255, 133 / 255);
-var $mdgriffith$elm_ui$Element$Font$color = function (fontColor) {
-	return A2(
-		$mdgriffith$elm_ui$Internal$Model$StyleClass,
-		$mdgriffith$elm_ui$Internal$Flag$fontColor,
-		A3(
-			$mdgriffith$elm_ui$Internal$Model$Colored,
-			'fc-' + $mdgriffith$elm_ui$Internal$Model$formatColorClass(fontColor),
-			'color',
-			fontColor));
-};
 var $mdgriffith$elm_ui$Element$Input$renderPlaceholder = F3(
 	function (_v0, forPlaceholder, on) {
 		var placeholderAttrs = _v0.a;
@@ -19666,6 +19650,491 @@ var $mdgriffith$elm_ui$Element$Input$textHelper = F3(
 			textOptions.label,
 			wrappedInput);
 	});
+var $mdgriffith$elm_ui$Element$Input$email = $mdgriffith$elm_ui$Element$Input$textHelper(
+	{
+		autofill: $elm$core$Maybe$Just('email'),
+		spellchecked: false,
+		type_: $mdgriffith$elm_ui$Element$Input$TextInputNode('email')
+	});
+var $mdgriffith$elm_ui$Element$Input$HiddenLabel = function (a) {
+	return {$: 'HiddenLabel', a: a};
+};
+var $mdgriffith$elm_ui$Element$Input$labelHidden = $mdgriffith$elm_ui$Element$Input$HiddenLabel;
+var $mdgriffith$elm_ui$Element$Input$Placeholder = F2(
+	function (a, b) {
+		return {$: 'Placeholder', a: a, b: b};
+	});
+var $mdgriffith$elm_ui$Element$Input$placeholder = $mdgriffith$elm_ui$Element$Input$Placeholder;
+var $author$project$Layout$viewEmailField = F2(
+	function (email, msg) {
+		return A2(
+			$mdgriffith$elm_ui$Element$Input$email,
+			_List_fromArray(
+				[
+					$mdgriffith$elm_ui$Element$height(
+					$mdgriffith$elm_ui$Element$px(48)),
+					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+					$mdgriffith$elm_ui$Element$Border$width(0),
+					$mdgriffith$elm_ui$Element$Border$rounded(24),
+					$mdgriffith$elm_ui$Element$Background$color(
+					A3($mdgriffith$elm_ui$Element$rgb, 1, 1, 1))
+				]),
+			{
+				label: $mdgriffith$elm_ui$Element$Input$labelHidden('email'),
+				onChange: msg,
+				placeholder: $elm$core$Maybe$Just(
+					A2(
+						$mdgriffith$elm_ui$Element$Input$placeholder,
+						_List_Nil,
+						$mdgriffith$elm_ui$Element$text('email'))),
+				text: email
+			});
+	});
+var $author$project$Layout$viewHeader = function (header) {
+	return A2(
+		$mdgriffith$elm_ui$Element$el,
+		_List_fromArray(
+			[
+				$mdgriffith$elm_ui$Element$centerX,
+				$mdgriffith$elm_ui$Element$Font$size(32),
+				$mdgriffith$elm_ui$Element$Font$bold
+			]),
+		$mdgriffith$elm_ui$Element$text(header));
+};
+var $author$project$ChatRoom$viewAddContactBox = function (email) {
+	return A2(
+		$mdgriffith$elm_ui$Element$column,
+		_List_fromArray(
+			[
+				$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$shrink),
+				$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$shrink),
+				$mdgriffith$elm_ui$Element$centerX,
+				$mdgriffith$elm_ui$Element$centerY,
+				$mdgriffith$elm_ui$Element$padding(32),
+				$mdgriffith$elm_ui$Element$spacing(16),
+				$mdgriffith$elm_ui$Element$Background$color(
+				A3($mdgriffith$elm_ui$Element$rgb255, 236, 240, 243)),
+				$mdgriffith$elm_ui$Element$Border$rounded(16),
+				$mdgriffith$elm_ui$Element$htmlAttribute(
+				A2($author$project$Util$onEnterHandler, $author$project$ChatRoom$AddChat, $author$project$ChatRoom$NoOp)),
+				$mdgriffith$elm_ui$Element$Border$shadow(
+				{
+					blur: 2,
+					color: A4($mdgriffith$elm_ui$Element$rgba, 0, 0, 0, 0.1),
+					offset: _Utils_Tuple2(2, 2),
+					size: 2
+				})
+			]),
+		_List_fromArray(
+			[
+				A2(
+				$mdgriffith$elm_ui$Element$el,
+				_List_fromArray(
+					[
+						$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+						$mdgriffith$elm_ui$Element$inFront($author$project$ChatRoom$viewCloseDialogBox)
+					]),
+				$author$project$Layout$viewHeader('Enter Email')),
+				A2($author$project$Layout$viewEmailField, email, $author$project$ChatRoom$ChangeEmail),
+				$author$project$ChatRoom$viewAddBtn
+			]));
+};
+var $author$project$Chat$messages = function (chat) {
+	if (chat.$ === 'PersonalChat') {
+		var body = chat.a;
+		return body.messages;
+	} else {
+		var body = chat.a;
+		return body.messages;
+	}
+};
+var $author$project$Chat$selected = function (chats) {
+	if (chats.$ === 'Active') {
+		var val = chats.b;
+		return $elm$core$Maybe$Just(val);
+	} else {
+		return $elm$core$Maybe$Nothing;
+	}
+};
+var $mdgriffith$elm_ui$Internal$Model$Bottom = {$: 'Bottom'};
+var $mdgriffith$elm_ui$Element$alignBottom = $mdgriffith$elm_ui$Internal$Model$AlignY($mdgriffith$elm_ui$Internal$Model$Bottom);
+var $mdgriffith$elm_ui$Internal$Model$Left = {$: 'Left'};
+var $mdgriffith$elm_ui$Element$alignLeft = $mdgriffith$elm_ui$Internal$Model$AlignX($mdgriffith$elm_ui$Internal$Model$Left);
+var $author$project$Message$body = function (message) {
+	if (message.$ === 'Confirmed') {
+		var msg = message.a;
+		return msg.body;
+	} else {
+		var msg = message.a;
+		return msg.body;
+	}
+};
+var $mdgriffith$elm_ui$Internal$Model$Max = F2(
+	function (a, b) {
+		return {$: 'Max', a: a, b: b};
+	});
+var $mdgriffith$elm_ui$Element$maximum = F2(
+	function (i, l) {
+		return A2($mdgriffith$elm_ui$Internal$Model$Max, i, l);
+	});
+var $author$project$Message$sender = function (message) {
+	if (message.$ === 'Confirmed') {
+		var msg = message.a;
+		return msg.sender;
+	} else {
+		var msg = message.a;
+		return msg.sender;
+	}
+};
+var $mdgriffith$elm_ui$Internal$Model$Paragraph = {$: 'Paragraph'};
+var $mdgriffith$elm_ui$Element$paragraph = F2(
+	function (attrs, children) {
+		return A4(
+			$mdgriffith$elm_ui$Internal$Model$element,
+			$mdgriffith$elm_ui$Internal$Model$asParagraph,
+			$mdgriffith$elm_ui$Internal$Model$div,
+			A2(
+				$elm$core$List$cons,
+				$mdgriffith$elm_ui$Internal$Model$Describe($mdgriffith$elm_ui$Internal$Model$Paragraph),
+				A2(
+					$elm$core$List$cons,
+					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+					A2(
+						$elm$core$List$cons,
+						$mdgriffith$elm_ui$Element$spacing(5),
+						attrs))),
+			$mdgriffith$elm_ui$Internal$Model$Unkeyed(children));
+	});
+var $author$project$Message$viewMsgBody = function (msg) {
+	return A2(
+		$mdgriffith$elm_ui$Element$column,
+		_List_fromArray(
+			[
+				$mdgriffith$elm_ui$Element$spacing(4),
+				$mdgriffith$elm_ui$Element$Font$size(16)
+			]),
+		A2(
+			$elm$core$List$map,
+			function (m) {
+				return A2(
+					$mdgriffith$elm_ui$Element$paragraph,
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+							$mdgriffith$elm_ui$Element$spacing(4)
+						]),
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$text(m)
+						]));
+			},
+			A2($elm$core$String$split, '\n', msg)));
+};
+var $mdgriffith$elm_ui$Element$none = $mdgriffith$elm_ui$Internal$Model$Empty;
+var $author$project$Message$timeStamp = function (message) {
+	if (message.$ === 'Confirmed') {
+		var msg = message.a;
+		return msg.timeStamp;
+	} else {
+		var msg = message.a;
+		return msg.timeStamp;
+	}
+};
+var $author$project$Message$viewStatus = F2(
+	function (msg, from) {
+		var time = $elm$core$String$fromInt(
+			$elm$time$Time$posixToMillis(
+				$author$project$Message$timeStamp(msg)));
+		var status = function () {
+			if (_Utils_eq(
+				$author$project$Message$sender(msg),
+				from)) {
+				if (msg.$ === 'Pending') {
+					return $mdgriffith$elm_ui$Element$Background$color(
+						A3($mdgriffith$elm_ui$Element$rgb255, 231, 101, 58));
+				} else {
+					return $mdgriffith$elm_ui$Element$Background$color(
+						A3($mdgriffith$elm_ui$Element$rgb255, 122, 231, 78));
+				}
+			} else {
+				return $mdgriffith$elm_ui$Element$Background$color(
+					A3($mdgriffith$elm_ui$Element$rgb255, 110, 150, 231));
+			}
+		}();
+		return A2(
+			$mdgriffith$elm_ui$Element$row,
+			_List_fromArray(
+				[
+					$mdgriffith$elm_ui$Element$Font$size(12),
+					$mdgriffith$elm_ui$Element$spacing(8)
+				]),
+			_List_fromArray(
+				[
+					$mdgriffith$elm_ui$Element$text(time),
+					A2(
+					$mdgriffith$elm_ui$Element$el,
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$width(
+							$mdgriffith$elm_ui$Element$px(8)),
+							$mdgriffith$elm_ui$Element$height(
+							$mdgriffith$elm_ui$Element$px(8)),
+							$mdgriffith$elm_ui$Element$Border$rounded(4),
+							status
+						]),
+					$mdgriffith$elm_ui$Element$none)
+				]));
+	});
+var $author$project$Message$view = F2(
+	function (msg, from) {
+		var fromWho = _Utils_eq(
+			from,
+			$author$project$Message$sender(msg)) ? _List_fromArray(
+			[
+				$mdgriffith$elm_ui$Element$alignRight,
+				$mdgriffith$elm_ui$Element$Background$color(
+				A3($mdgriffith$elm_ui$Element$rgb255, 250, 250, 250))
+			]) : _List_fromArray(
+			[
+				$mdgriffith$elm_ui$Element$alignLeft,
+				$mdgriffith$elm_ui$Element$Background$color(
+				A3($mdgriffith$elm_ui$Element$rgb255, 209, 220, 231))
+			]);
+		return A2(
+			$mdgriffith$elm_ui$Element$column,
+			_Utils_ap(
+				_List_fromArray(
+					[
+						$mdgriffith$elm_ui$Element$width(
+						A2($mdgriffith$elm_ui$Element$maximum, 640, $mdgriffith$elm_ui$Element$shrink)),
+						$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$shrink),
+						$mdgriffith$elm_ui$Element$alignBottom,
+						$mdgriffith$elm_ui$Element$padding(12),
+						$mdgriffith$elm_ui$Element$spacing(8),
+						$mdgriffith$elm_ui$Element$Border$rounded(8)
+					]),
+				fromWho),
+			_List_fromArray(
+				[
+					$author$project$Message$viewMsgBody(
+					$author$project$Message$body(msg)),
+					A2($author$project$Message$viewStatus, msg, from)
+				]));
+	});
+var $author$project$Chat$view = F2(
+	function (msgList, user) {
+		return A2(
+			$mdgriffith$elm_ui$Element$column,
+			_List_fromArray(
+				[
+					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+					$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
+					A2($mdgriffith$elm_ui$Element$paddingXY, 72, 24),
+					$mdgriffith$elm_ui$Element$spacing(12)
+				]),
+			A2(
+				$elm$core$List$map,
+				function (msg) {
+					return A2($author$project$Message$view, msg, user);
+				},
+				msgList));
+	});
+var $author$project$Chat$title = function (chat) {
+	if (chat.$ === 'PersonalChat') {
+		var body = chat.a;
+		return A2($elm$core$Maybe$withDefault, 'No Name', body.recipient.userName);
+	} else {
+		var body = chat.a;
+		return A2($elm$core$Maybe$withDefault, 'Untitled', body.name);
+	}
+};
+var $mdgriffith$elm_ui$Element$moveDown = function (y) {
+	return A2(
+		$mdgriffith$elm_ui$Internal$Model$TransformComponent,
+		$mdgriffith$elm_ui$Internal$Flag$moveY,
+		$mdgriffith$elm_ui$Internal$Model$MoveY(y));
+};
+var $author$project$ChatRoom$viewAvatar = function (open) {
+	return A2(
+		$mdgriffith$elm_ui$Element$el,
+		_List_fromArray(
+			[
+				$mdgriffith$elm_ui$Element$width(
+				$mdgriffith$elm_ui$Element$px(48)),
+				$mdgriffith$elm_ui$Element$height(
+				$mdgriffith$elm_ui$Element$px(48)),
+				$mdgriffith$elm_ui$Element$Border$rounded(24),
+				$mdgriffith$elm_ui$Element$Background$color(
+				A3($mdgriffith$elm_ui$Element$rgb255, 236, 240, 243)),
+				$mdgriffith$elm_ui$Element$clip
+			]),
+		A2(
+			$mdgriffith$elm_ui$Element$el,
+			_List_fromArray(
+				[
+					$mdgriffith$elm_ui$Element$width(
+					$mdgriffith$elm_ui$Element$px(64)),
+					$mdgriffith$elm_ui$Element$height(
+					$mdgriffith$elm_ui$Element$px(64)),
+					$mdgriffith$elm_ui$Element$centerX,
+					$mdgriffith$elm_ui$Element$centerY,
+					$mdgriffith$elm_ui$Element$Border$rounded(36),
+					$mdgriffith$elm_ui$Element$moveDown(32),
+					$mdgriffith$elm_ui$Element$Background$color(
+					A3($mdgriffith$elm_ui$Element$rgb255, 222, 150, 45))
+				]),
+			A2(
+				$mdgriffith$elm_ui$Element$el,
+				_List_fromArray(
+					[
+						$mdgriffith$elm_ui$Element$width(
+						$mdgriffith$elm_ui$Element$px(32)),
+						$mdgriffith$elm_ui$Element$height(
+						$mdgriffith$elm_ui$Element$px(32)),
+						$mdgriffith$elm_ui$Element$centerX,
+						$mdgriffith$elm_ui$Element$centerY,
+						$mdgriffith$elm_ui$Element$Border$rounded(16),
+						$mdgriffith$elm_ui$Element$Border$color(
+						A3($mdgriffith$elm_ui$Element$rgb255, 236, 240, 243)),
+						$mdgriffith$elm_ui$Element$Border$width(2),
+						$mdgriffith$elm_ui$Element$moveUp(
+						open ? 48 : 42),
+						$mdgriffith$elm_ui$Element$Background$color(
+						A3($mdgriffith$elm_ui$Element$rgb255, 222, 150, 45))
+					]),
+				$mdgriffith$elm_ui$Element$none)));
+};
+var $author$project$ChatRoom$viewChatToolBar = function (chat) {
+	return A2(
+		$mdgriffith$elm_ui$Element$row,
+		_List_fromArray(
+			[
+				$mdgriffith$elm_ui$Element$alignTop,
+				$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+				$mdgriffith$elm_ui$Element$height(
+				$mdgriffith$elm_ui$Element$px(72)),
+				$mdgriffith$elm_ui$Element$Background$color(
+				A4($mdgriffith$elm_ui$Element$rgba, 0, 0, 0, 0.05)),
+				$mdgriffith$elm_ui$Element$padding(12),
+				$mdgriffith$elm_ui$Element$spacing(12)
+			]),
+		_List_fromArray(
+			[
+				$author$project$ChatRoom$viewAvatar(true),
+				$mdgriffith$elm_ui$Element$text(
+				$author$project$Chat$title(chat))
+			]));
+};
+var $author$project$ChatRoom$ChangText = function (a) {
+	return {$: 'ChangText', a: a};
+};
+var $author$project$ChatRoom$SendMessage = {$: 'SendMessage'};
+var $mdgriffith$elm_ui$Internal$Model$Focus = {$: 'Focus'};
+var $mdgriffith$elm_ui$Internal$Model$PseudoSelector = F2(
+	function (a, b) {
+		return {$: 'PseudoSelector', a: a, b: b};
+	});
+var $mdgriffith$elm_ui$Internal$Flag$focus = $mdgriffith$elm_ui$Internal$Flag$flag(31);
+var $elm$virtual_dom$VirtualDom$mapAttribute = _VirtualDom_mapAttribute;
+var $mdgriffith$elm_ui$Internal$Model$mapAttrFromStyle = F2(
+	function (fn, attr) {
+		switch (attr.$) {
+			case 'NoAttribute':
+				return $mdgriffith$elm_ui$Internal$Model$NoAttribute;
+			case 'Describe':
+				var description = attr.a;
+				return $mdgriffith$elm_ui$Internal$Model$Describe(description);
+			case 'AlignX':
+				var x = attr.a;
+				return $mdgriffith$elm_ui$Internal$Model$AlignX(x);
+			case 'AlignY':
+				var y = attr.a;
+				return $mdgriffith$elm_ui$Internal$Model$AlignY(y);
+			case 'Width':
+				var x = attr.a;
+				return $mdgriffith$elm_ui$Internal$Model$Width(x);
+			case 'Height':
+				var x = attr.a;
+				return $mdgriffith$elm_ui$Internal$Model$Height(x);
+			case 'Class':
+				var x = attr.a;
+				var y = attr.b;
+				return A2($mdgriffith$elm_ui$Internal$Model$Class, x, y);
+			case 'StyleClass':
+				var flag = attr.a;
+				var style = attr.b;
+				return A2($mdgriffith$elm_ui$Internal$Model$StyleClass, flag, style);
+			case 'Nearby':
+				var location = attr.a;
+				var elem = attr.b;
+				return A2(
+					$mdgriffith$elm_ui$Internal$Model$Nearby,
+					location,
+					A2($mdgriffith$elm_ui$Internal$Model$map, fn, elem));
+			case 'Attr':
+				var htmlAttr = attr.a;
+				return $mdgriffith$elm_ui$Internal$Model$Attr(
+					A2($elm$virtual_dom$VirtualDom$mapAttribute, fn, htmlAttr));
+			default:
+				var fl = attr.a;
+				var trans = attr.b;
+				return A2($mdgriffith$elm_ui$Internal$Model$TransformComponent, fl, trans);
+		}
+	});
+var $mdgriffith$elm_ui$Internal$Model$removeNever = function (style) {
+	return A2($mdgriffith$elm_ui$Internal$Model$mapAttrFromStyle, $elm$core$Basics$never, style);
+};
+var $mdgriffith$elm_ui$Internal$Model$unwrapDecsHelper = F2(
+	function (attr, _v0) {
+		var styles = _v0.a;
+		var trans = _v0.b;
+		var _v1 = $mdgriffith$elm_ui$Internal$Model$removeNever(attr);
+		switch (_v1.$) {
+			case 'StyleClass':
+				var style = _v1.b;
+				return _Utils_Tuple2(
+					A2($elm$core$List$cons, style, styles),
+					trans);
+			case 'TransformComponent':
+				var flag = _v1.a;
+				var component = _v1.b;
+				return _Utils_Tuple2(
+					styles,
+					A2($mdgriffith$elm_ui$Internal$Model$composeTransformation, trans, component));
+			default:
+				return _Utils_Tuple2(styles, trans);
+		}
+	});
+var $mdgriffith$elm_ui$Internal$Model$unwrapDecorations = function (attrs) {
+	var _v0 = A3(
+		$elm$core$List$foldl,
+		$mdgriffith$elm_ui$Internal$Model$unwrapDecsHelper,
+		_Utils_Tuple2(_List_Nil, $mdgriffith$elm_ui$Internal$Model$Untransformed),
+		attrs);
+	var styles = _v0.a;
+	var transform = _v0.b;
+	return A2(
+		$elm$core$List$cons,
+		$mdgriffith$elm_ui$Internal$Model$Transform(transform),
+		styles);
+};
+var $mdgriffith$elm_ui$Element$focused = function (decs) {
+	return A2(
+		$mdgriffith$elm_ui$Internal$Model$StyleClass,
+		$mdgriffith$elm_ui$Internal$Flag$focus,
+		A2(
+			$mdgriffith$elm_ui$Internal$Model$PseudoSelector,
+			$mdgriffith$elm_ui$Internal$Model$Focus,
+			$mdgriffith$elm_ui$Internal$Model$unwrapDecorations(decs)));
+};
+var $mdgriffith$elm_ui$Internal$Model$Min = F2(
+	function (a, b) {
+		return {$: 'Min', a: a, b: b};
+	});
+var $mdgriffith$elm_ui$Element$minimum = F2(
+	function (i, l) {
+		return A2($mdgriffith$elm_ui$Internal$Model$Min, i, l);
+	});
 var $mdgriffith$elm_ui$Element$Input$multiline = F2(
 	function (attrs, multi) {
 		return A3(
@@ -19674,47 +20143,6 @@ var $mdgriffith$elm_ui$Element$Input$multiline = F2(
 			attrs,
 			{label: multi.label, onChange: multi.onChange, placeholder: multi.placeholder, text: multi.text});
 	});
-var $elm$json$Json$Decode$fail = _Json_fail;
-var $elm$html$Html$Events$keyCode = A2($elm$json$Json$Decode$field, 'keyCode', $elm$json$Json$Decode$int);
-var $elm$virtual_dom$VirtualDom$MayPreventDefault = function (a) {
-	return {$: 'MayPreventDefault', a: a};
-};
-var $elm$html$Html$Events$preventDefaultOn = F2(
-	function (event, decoder) {
-		return A2(
-			$elm$virtual_dom$VirtualDom$on,
-			event,
-			$elm$virtual_dom$VirtualDom$MayPreventDefault(decoder));
-	});
-var $author$project$Util$onEnterHandler = F2(
-	function (send, noOp) {
-		return A2(
-			$elm$html$Html$Events$preventDefaultOn,
-			'keydown',
-			A2(
-				$elm$json$Json$Decode$andThen,
-				function (keys) {
-					return (keys.code === 13) ? (keys.shift ? $elm$json$Json$Decode$succeed(
-						_Utils_Tuple2(noOp, false)) : ((keys.ctrl || keys.alt) ? $elm$json$Json$Decode$succeed(
-						_Utils_Tuple2(noOp, true)) : $elm$json$Json$Decode$succeed(
-						_Utils_Tuple2(send, true)))) : $elm$json$Json$Decode$fail('Not Enter Key');
-				},
-				A5(
-					$elm$json$Json$Decode$map4,
-					F4(
-						function (key, shift, ctrl, alt) {
-							return {alt: alt, code: key, ctrl: ctrl, shift: shift};
-						}),
-					$elm$html$Html$Events$keyCode,
-					A2($elm$json$Json$Decode$field, 'shiftKey', $elm$json$Json$Decode$bool),
-					A2($elm$json$Json$Decode$field, 'ctrlKey', $elm$json$Json$Decode$bool),
-					A2($elm$json$Json$Decode$field, 'altKey', $elm$json$Json$Decode$bool))));
-	});
-var $mdgriffith$elm_ui$Element$Input$Placeholder = F2(
-	function (a, b) {
-		return {$: 'Placeholder', a: a, b: b};
-	});
-var $mdgriffith$elm_ui$Element$Input$placeholder = $mdgriffith$elm_ui$Element$Input$Placeholder;
 var $author$project$ChatRoom$viewTextInput = function (msg) {
 	return A2(
 		$mdgriffith$elm_ui$Element$row,
@@ -19787,7 +20215,7 @@ var $author$project$ChatRoom$viewChatBody = F2(
 							[
 								$author$project$ChatRoom$viewChatToolBar(chat),
 								A2(
-								$author$project$ChatRoom$viewMessages,
+								$author$project$Chat$view,
 								$author$project$Chat$messages(chat),
 								sender),
 								$author$project$ChatRoom$viewTextInput(
@@ -19796,48 +20224,6 @@ var $author$project$ChatRoom$viewChatBody = F2(
 				}
 			}());
 	});
-var $mdgriffith$elm_ui$Internal$Flag$bgGradient = $mdgriffith$elm_ui$Internal$Flag$flag(10);
-var $mdgriffith$elm_ui$Element$Background$gradient = function (_v0) {
-	var angle = _v0.angle;
-	var steps = _v0.steps;
-	if (!steps.b) {
-		return $mdgriffith$elm_ui$Internal$Model$NoAttribute;
-	} else {
-		if (!steps.b.b) {
-			var clr = steps.a;
-			return A2(
-				$mdgriffith$elm_ui$Internal$Model$StyleClass,
-				$mdgriffith$elm_ui$Internal$Flag$bgColor,
-				A3(
-					$mdgriffith$elm_ui$Internal$Model$Colored,
-					'bg-' + $mdgriffith$elm_ui$Internal$Model$formatColorClass(clr),
-					'background-color',
-					clr));
-		} else {
-			return A2(
-				$mdgriffith$elm_ui$Internal$Model$StyleClass,
-				$mdgriffith$elm_ui$Internal$Flag$bgGradient,
-				A3(
-					$mdgriffith$elm_ui$Internal$Model$Single,
-					'bg-grad-' + A2(
-						$elm$core$String$join,
-						'-',
-						A2(
-							$elm$core$List$cons,
-							$mdgriffith$elm_ui$Internal$Model$floatClass(angle),
-							A2($elm$core$List$map, $mdgriffith$elm_ui$Internal$Model$formatColorClass, steps))),
-					'background-image',
-					'linear-gradient(' + (A2(
-						$elm$core$String$join,
-						', ',
-						A2(
-							$elm$core$List$cons,
-							$elm$core$String$fromFloat(angle) + 'rad',
-							A2($elm$core$List$map, $mdgriffith$elm_ui$Internal$Model$formatColor, steps))) + ')')));
-		}
-	}
-};
-var $mdgriffith$elm_ui$Internal$Flag$fontWeight = $mdgriffith$elm_ui$Internal$Flag$flag(13);
 var $mdgriffith$elm_ui$Element$Font$semiBold = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontWeight, $mdgriffith$elm_ui$Internal$Style$classes.textSemiBold);
 var $author$project$Chat$toList = function (chats) {
 	if (chats.$ === 'Idle') {
@@ -19885,8 +20271,7 @@ var $mdgriffith$elm_ui$Element$mouseOver = function (decs) {
 			$mdgriffith$elm_ui$Internal$Model$unwrapDecorations(decs)));
 };
 var $mdgriffith$elm_ui$Element$Events$onMouseDown = A2($elm$core$Basics$composeL, $mdgriffith$elm_ui$Internal$Model$Attr, $elm$html$Html$Events$onMouseDown);
-var $mdgriffith$elm_ui$Element$pointer = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$cursor, $mdgriffith$elm_ui$Internal$Style$classes.cursorPointer);
-var $author$project$ChatRoom$viewChatTab = F2(
+var $author$project$ChatRoom$viewChatCard = F2(
 	function (chat, open) {
 		return A2(
 			$mdgriffith$elm_ui$Element$row,
@@ -19963,7 +20348,7 @@ var $author$project$ChatRoom$viewChats = function (chats) {
 						$elm$core$List$map,
 						function (chat) {
 							return A2(
-								$author$project$ChatRoom$viewChatTab,
+								$author$project$ChatRoom$viewChatCard,
 								chat,
 								_Utils_eq(
 									$author$project$Chat$selected(chats),
@@ -19973,59 +20358,46 @@ var $author$project$ChatRoom$viewChats = function (chats) {
 				_List_fromArray(
 					[$author$project$ChatRoom$viewDivider]))));
 };
+var $author$project$ChatRoom$viewAddChatBtn = A2(
+	$mdgriffith$elm_ui$Element$image,
+	_List_fromArray(
+		[
+			$mdgriffith$elm_ui$Element$alignRight,
+			A2($mdgriffith$elm_ui$Element$paddingXY, 12, 12),
+			$mdgriffith$elm_ui$Element$Border$rounded(24),
+			$mdgriffith$elm_ui$Element$centerY,
+			$mdgriffith$elm_ui$Element$pointer,
+			$mdgriffith$elm_ui$Element$mouseOver(
+			_List_fromArray(
+				[
+					$mdgriffith$elm_ui$Element$Background$color(
+					A4($mdgriffith$elm_ui$Element$rgba, 0, 0, 0, 0.1))
+				])),
+			$mdgriffith$elm_ui$Element$Events$onMouseUp(
+			$author$project$ChatRoom$ToggleDialogBox(
+				$elm$core$Maybe$Just(
+					$author$project$ChatRoom$NewContact(''))))
+		]),
+	{description: '+', src: '/assets/add_comment-24px.svg'});
 var $author$project$ChatRoom$Exit = {$: 'Exit'};
-var $elm$html$Html$Attributes$alt = $elm$html$Html$Attributes$stringProperty('alt');
-var $elm$html$Html$Attributes$src = function (url) {
-	return A2(
-		$elm$html$Html$Attributes$stringProperty,
-		'src',
-		_VirtualDom_noJavaScriptOrHtmlUri(url));
-};
-var $mdgriffith$elm_ui$Element$image = F2(
-	function (attrs, _v0) {
-		var src = _v0.src;
-		var description = _v0.description;
-		var imageAttributes = A2(
-			$elm$core$List$filter,
-			function (a) {
-				switch (a.$) {
-					case 'Width':
-						return true;
-					case 'Height':
-						return true;
-					default:
-						return false;
-				}
-			},
-			attrs);
-		return A4(
-			$mdgriffith$elm_ui$Internal$Model$element,
-			$mdgriffith$elm_ui$Internal$Model$asEl,
-			$mdgriffith$elm_ui$Internal$Model$div,
-			A2(
-				$elm$core$List$cons,
-				$mdgriffith$elm_ui$Internal$Model$htmlClass($mdgriffith$elm_ui$Internal$Style$classes.imageContainer),
-				attrs),
-			$mdgriffith$elm_ui$Internal$Model$Unkeyed(
-				_List_fromArray(
-					[
-						A4(
-						$mdgriffith$elm_ui$Internal$Model$element,
-						$mdgriffith$elm_ui$Internal$Model$asEl,
-						$mdgriffith$elm_ui$Internal$Model$NodeName('img'),
-						_Utils_ap(
-							_List_fromArray(
-								[
-									$mdgriffith$elm_ui$Internal$Model$Attr(
-									$elm$html$Html$Attributes$src(src)),
-									$mdgriffith$elm_ui$Internal$Model$Attr(
-									$elm$html$Html$Attributes$alt(description))
-								]),
-							imageAttributes),
-						$mdgriffith$elm_ui$Internal$Model$Unkeyed(_List_Nil))
-					])));
-	});
-var $mdgriffith$elm_ui$Element$Events$onMouseUp = A2($elm$core$Basics$composeL, $mdgriffith$elm_ui$Internal$Model$Attr, $elm$html$Html$Events$onMouseUp);
+var $author$project$ChatRoom$viewExitBtn = A2(
+	$mdgriffith$elm_ui$Element$image,
+	_List_fromArray(
+		[
+			$mdgriffith$elm_ui$Element$alignLeft,
+			A2($mdgriffith$elm_ui$Element$paddingXY, 12, 12),
+			$mdgriffith$elm_ui$Element$Border$rounded(24),
+			$mdgriffith$elm_ui$Element$centerY,
+			$mdgriffith$elm_ui$Element$pointer,
+			$mdgriffith$elm_ui$Element$mouseOver(
+			_List_fromArray(
+				[
+					$mdgriffith$elm_ui$Element$Background$color(
+					A4($mdgriffith$elm_ui$Element$rgba, 0, 0, 0, 0.1))
+				])),
+			$mdgriffith$elm_ui$Element$Events$onMouseUp($author$project$ChatRoom$Exit)
+		]),
+	{description: 'exit', src: '/assets/exit_from_app-24px.svg'});
 var $author$project$ChatRoom$viewSideToolBar = A2(
 	$mdgriffith$elm_ui$Element$row,
 	_List_fromArray(
@@ -20036,21 +20408,17 @@ var $author$project$ChatRoom$viewSideToolBar = A2(
 			$mdgriffith$elm_ui$Element$padding(12),
 			$mdgriffith$elm_ui$Element$spacing(12),
 			$mdgriffith$elm_ui$Element$Background$color(
-			A4($mdgriffith$elm_ui$Element$rgba, 1, 1, 1, 0.1)),
-			$mdgriffith$elm_ui$Element$Events$onMouseUp($author$project$ChatRoom$Exit)
+			A4($mdgriffith$elm_ui$Element$rgba, 1, 1, 1, 0.1))
 		]),
 	_List_fromArray(
 		[
-			A2(
-			$mdgriffith$elm_ui$Element$image,
-			_List_fromArray(
-				[$mdgriffith$elm_ui$Element$alignLeft, $mdgriffith$elm_ui$Element$centerY, $mdgriffith$elm_ui$Element$pointer]),
-			{description: 'exit', src: '/assets/exit_from_app-24px.svg'}),
+			$author$project$ChatRoom$viewExitBtn,
 			A2(
 			$mdgriffith$elm_ui$Element$el,
 			_List_fromArray(
 				[$mdgriffith$elm_ui$Element$centerX, $mdgriffith$elm_ui$Element$centerY]),
-			$mdgriffith$elm_ui$Element$text('Side Bar...'))
+			$mdgriffith$elm_ui$Element$text('WTF Chat')),
+			$author$project$ChatRoom$viewAddChatBtn
 		]));
 var $author$project$ChatRoom$viewSideMenu = function (model) {
 	return A2(
@@ -20081,14 +20449,38 @@ var $author$project$ChatRoom$viewSideMenu = function (model) {
 			]));
 };
 var $author$project$ChatRoom$view = function (model) {
+	var attr = function () {
+		var _v0 = model.dialogBox;
+		if (_v0.$ === 'Nothing') {
+			return _List_Nil;
+		} else {
+			var email = _v0.a.a;
+			return _List_fromArray(
+				[
+					$mdgriffith$elm_ui$Element$inFront(
+					A2(
+						$mdgriffith$elm_ui$Element$el,
+						_List_fromArray(
+							[
+								$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+								$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
+								$mdgriffith$elm_ui$Element$Background$color(
+								A4($mdgriffith$elm_ui$Element$rgba, 1, 1, 1, 0.5))
+							]),
+						$author$project$ChatRoom$viewAddContactBox(email)))
+				]);
+		}
+	}();
 	return {
 		content: A2(
 			$mdgriffith$elm_ui$Element$row,
-			_List_fromArray(
-				[
-					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-					$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill)
-				]),
+			_Utils_ap(
+				_List_fromArray(
+					[
+						$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+						$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill)
+					]),
+				attr),
 			_List_fromArray(
 				[
 					$author$project$ChatRoom$viewSideMenu(model),
@@ -20100,32 +20492,11 @@ var $author$project$ChatRoom$view = function (model) {
 		title: 'Chat'
 	};
 };
+var $author$project$Entrance$ChangeEmail = function (a) {
+	return {$: 'ChangeEmail', a: a};
+};
 var $author$project$Entrance$Enter = {$: 'Enter'};
 var $author$project$Entrance$NoOp = {$: 'NoOp'};
-var $mdgriffith$elm_ui$Internal$Model$boxShadowClass = function (shadow) {
-	return $elm$core$String$concat(
-		_List_fromArray(
-			[
-				shadow.inset ? 'box-inset' : 'box-',
-				$mdgriffith$elm_ui$Internal$Model$floatClass(shadow.offset.a) + 'px',
-				$mdgriffith$elm_ui$Internal$Model$floatClass(shadow.offset.b) + 'px',
-				$mdgriffith$elm_ui$Internal$Model$floatClass(shadow.blur) + 'px',
-				$mdgriffith$elm_ui$Internal$Model$floatClass(shadow.size) + 'px',
-				$mdgriffith$elm_ui$Internal$Model$formatColorClass(shadow.color)
-			]));
-};
-var $mdgriffith$elm_ui$Internal$Flag$shadows = $mdgriffith$elm_ui$Internal$Flag$flag(19);
-var $mdgriffith$elm_ui$Element$Border$shadow = function (almostShade) {
-	var shade = {blur: almostShade.blur, color: almostShade.color, inset: false, offset: almostShade.offset, size: almostShade.size};
-	return A2(
-		$mdgriffith$elm_ui$Internal$Model$StyleClass,
-		$mdgriffith$elm_ui$Internal$Flag$shadows,
-		A3(
-			$mdgriffith$elm_ui$Internal$Model$Single,
-			$mdgriffith$elm_ui$Internal$Model$boxShadowClass(shade),
-			'box-shadow',
-			$mdgriffith$elm_ui$Internal$Model$formatBoxShadow(shade)));
-};
 var $author$project$Entrance$popOutEffect = function (body) {
 	return A2(
 		$mdgriffith$elm_ui$Element$el,
@@ -20155,187 +20526,16 @@ var $author$project$Entrance$popOutEffect = function (body) {
 				]),
 			body));
 };
-var $author$project$Entrance$ChangeEmail = function (a) {
-	return {$: 'ChangeEmail', a: a};
-};
-var $mdgriffith$elm_ui$Element$Input$TextInputNode = function (a) {
-	return {$: 'TextInputNode', a: a};
-};
-var $mdgriffith$elm_ui$Element$Input$email = $mdgriffith$elm_ui$Element$Input$textHelper(
-	{
-		autofill: $elm$core$Maybe$Just('email'),
-		spellchecked: false,
-		type_: $mdgriffith$elm_ui$Element$Input$TextInputNode('email')
-	});
-var $mdgriffith$elm_ui$Element$Input$Above = {$: 'Above'};
-var $mdgriffith$elm_ui$Element$Input$Label = F3(
-	function (a, b, c) {
-		return {$: 'Label', a: a, b: b, c: c};
-	});
-var $mdgriffith$elm_ui$Element$Input$labelAbove = $mdgriffith$elm_ui$Element$Input$Label($mdgriffith$elm_ui$Element$Input$Above);
-var $author$project$Entrance$viewEmailField = function (email) {
-	return A2(
-		$mdgriffith$elm_ui$Element$Input$email,
-		_List_fromArray(
-			[
-				$mdgriffith$elm_ui$Element$height(
-				$mdgriffith$elm_ui$Element$px(48)),
-				$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-				$mdgriffith$elm_ui$Element$Border$width(0),
-				$mdgriffith$elm_ui$Element$Border$rounded(24),
-				$mdgriffith$elm_ui$Element$Background$color(
-				A3($mdgriffith$elm_ui$Element$rgb, 1, 1, 1))
-			]),
-		{
-			label: A2(
-				$mdgriffith$elm_ui$Element$Input$labelAbove,
-				_List_fromArray(
-					[$mdgriffith$elm_ui$Element$centerY, $mdgriffith$elm_ui$Element$Font$semiBold]),
-				$mdgriffith$elm_ui$Element$text('email')),
-			onChange: $author$project$Entrance$ChangeEmail,
-			placeholder: $elm$core$Maybe$Just(
-				A2(
-					$mdgriffith$elm_ui$Element$Input$placeholder,
-					_List_Nil,
-					$mdgriffith$elm_ui$Element$text('my.email@example.com'))),
-			text: email
-		});
-};
-var $mdgriffith$elm_ui$Element$Font$bold = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontWeight, $mdgriffith$elm_ui$Internal$Style$classes.bold);
-var $mdgriffith$elm_ui$Internal$Model$Button = {$: 'Button'};
-var $elm$html$Html$Attributes$disabled = $elm$html$Html$Attributes$boolProperty('disabled');
-var $mdgriffith$elm_ui$Element$Input$focusDefault = function (attrs) {
-	return A2($elm$core$List$any, $mdgriffith$elm_ui$Element$Input$hasFocusStyle, attrs) ? $mdgriffith$elm_ui$Internal$Model$NoAttribute : $mdgriffith$elm_ui$Internal$Model$htmlClass('focusable');
-};
-var $mdgriffith$elm_ui$Element$Events$onClick = A2($elm$core$Basics$composeL, $mdgriffith$elm_ui$Internal$Model$Attr, $elm$html$Html$Events$onClick);
-var $mdgriffith$elm_ui$Element$Input$enter = 'Enter';
-var $mdgriffith$elm_ui$Element$Input$onKey = F2(
-	function (desiredCode, msg) {
-		var decode = function (code) {
-			return _Utils_eq(code, desiredCode) ? $elm$json$Json$Decode$succeed(msg) : $elm$json$Json$Decode$fail('Not the enter key');
-		};
-		var isKey = A2(
-			$elm$json$Json$Decode$andThen,
-			decode,
-			A2($elm$json$Json$Decode$field, 'key', $elm$json$Json$Decode$string));
-		return $mdgriffith$elm_ui$Internal$Model$Attr(
-			A2(
-				$elm$html$Html$Events$preventDefaultOn,
-				'keyup',
-				A2(
-					$elm$json$Json$Decode$map,
-					function (fired) {
-						return _Utils_Tuple2(fired, true);
-					},
-					isKey)));
-	});
-var $mdgriffith$elm_ui$Element$Input$onEnter = function (msg) {
-	return A2($mdgriffith$elm_ui$Element$Input$onKey, $mdgriffith$elm_ui$Element$Input$enter, msg);
-};
-var $elm$html$Html$Attributes$tabindex = function (n) {
-	return A2(
-		_VirtualDom_attribute,
-		'tabIndex',
-		$elm$core$String$fromInt(n));
-};
-var $mdgriffith$elm_ui$Element$Input$button = F2(
-	function (attrs, _v0) {
-		var onPress = _v0.onPress;
-		var label = _v0.label;
-		return A4(
-			$mdgriffith$elm_ui$Internal$Model$element,
-			$mdgriffith$elm_ui$Internal$Model$asEl,
-			$mdgriffith$elm_ui$Internal$Model$div,
-			A2(
-				$elm$core$List$cons,
-				$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$shrink),
-				A2(
-					$elm$core$List$cons,
-					$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$shrink),
-					A2(
-						$elm$core$List$cons,
-						$mdgriffith$elm_ui$Internal$Model$htmlClass($mdgriffith$elm_ui$Internal$Style$classes.contentCenterX + (' ' + ($mdgriffith$elm_ui$Internal$Style$classes.contentCenterY + (' ' + ($mdgriffith$elm_ui$Internal$Style$classes.seButton + (' ' + $mdgriffith$elm_ui$Internal$Style$classes.noTextSelection)))))),
-						A2(
-							$elm$core$List$cons,
-							$mdgriffith$elm_ui$Element$pointer,
-							A2(
-								$elm$core$List$cons,
-								$mdgriffith$elm_ui$Element$Input$focusDefault(attrs),
-								A2(
-									$elm$core$List$cons,
-									$mdgriffith$elm_ui$Internal$Model$Describe($mdgriffith$elm_ui$Internal$Model$Button),
-									A2(
-										$elm$core$List$cons,
-										$mdgriffith$elm_ui$Internal$Model$Attr(
-											$elm$html$Html$Attributes$tabindex(0)),
-										function () {
-											if (onPress.$ === 'Nothing') {
-												return A2(
-													$elm$core$List$cons,
-													$mdgriffith$elm_ui$Internal$Model$Attr(
-														$elm$html$Html$Attributes$disabled(true)),
-													attrs);
-											} else {
-												var msg = onPress.a;
-												return A2(
-													$elm$core$List$cons,
-													$mdgriffith$elm_ui$Element$Events$onClick(msg),
-													A2(
-														$elm$core$List$cons,
-														$mdgriffith$elm_ui$Element$Input$onEnter(msg),
-														attrs));
-											}
-										}()))))))),
-			$mdgriffith$elm_ui$Internal$Model$Unkeyed(
-				_List_fromArray(
-					[label])));
-	});
 var $author$project$Entrance$viewEnterBtn = A2(
-	$mdgriffith$elm_ui$Element$Input$button,
+	$mdgriffith$elm_ui$Element$el,
 	_List_fromArray(
-		[
-			$mdgriffith$elm_ui$Element$width(
-			$mdgriffith$elm_ui$Element$px(160)),
-			$mdgriffith$elm_ui$Element$height(
-			$mdgriffith$elm_ui$Element$px(48)),
-			$mdgriffith$elm_ui$Element$centerX,
-			$mdgriffith$elm_ui$Element$Border$rounded(24),
-			$mdgriffith$elm_ui$Element$Background$gradient(
-			{
-				angle: -2.5,
-				steps: _List_fromArray(
-					[
-						A3($mdgriffith$elm_ui$Element$rgb255, 150, 20, 200),
-						A3($mdgriffith$elm_ui$Element$rgb255, 75, 25, 225)
-					])
-			})
-		]),
-	{
-		label: A2(
-			$mdgriffith$elm_ui$Element$el,
-			_List_fromArray(
-				[
-					$mdgriffith$elm_ui$Element$centerX,
-					$mdgriffith$elm_ui$Element$centerY,
-					$mdgriffith$elm_ui$Element$Font$color(
-					A3($mdgriffith$elm_ui$Element$rgb, 1, 1, 1)),
-					$mdgriffith$elm_ui$Element$Font$bold,
-					$mdgriffith$elm_ui$Element$Font$size(24)
-				]),
-			$mdgriffith$elm_ui$Element$text('Enter')),
-		onPress: $elm$core$Maybe$Just($author$project$Entrance$Enter)
-	});
-var $author$project$Entrance$viewHeader = function (header) {
-	return A2(
-		$mdgriffith$elm_ui$Element$el,
-		_List_fromArray(
-			[
-				$mdgriffith$elm_ui$Element$Font$size(32),
-				$mdgriffith$elm_ui$Element$Font$bold,
-				$mdgriffith$elm_ui$Element$centerX
-			]),
-		$mdgriffith$elm_ui$Element$text(header));
-};
+		[$mdgriffith$elm_ui$Element$centerX]),
+	$author$project$Layout$viewPrimaryBtn(
+		{
+			msg: $author$project$Entrance$Enter,
+			size: _Utils_Tuple2(160, 48),
+			text: 'Enter'
+		}));
 var $author$project$Entrance$ChangePassword = function (a) {
 	return {$: 'ChangePassword', a: a};
 };
@@ -20355,6 +20555,7 @@ var $mdgriffith$elm_ui$Element$Input$currentPassword = F2(
 var $author$project$Entrance$ToggleShowPassword = function (a) {
 	return {$: 'ToggleShowPassword', a: a};
 };
+var $mdgriffith$elm_ui$Element$Input$enter = 'Enter';
 var $mdgriffith$elm_ui$Element$Input$onKeyLookup = function (lookup) {
 	var decode = function (code) {
 		var _v0 = lookup(code);
@@ -20373,6 +20574,12 @@ var $mdgriffith$elm_ui$Element$Input$onKeyLookup = function (lookup) {
 		A2($elm$html$Html$Events$on, 'keyup', isKey));
 };
 var $mdgriffith$elm_ui$Element$Input$space = ' ';
+var $elm$html$Html$Attributes$tabindex = function (n) {
+	return A2(
+		_VirtualDom_attribute,
+		'tabIndex',
+		$elm$core$String$fromInt(n));
+};
 var $mdgriffith$elm_ui$Element$Input$tabindex = A2($elm$core$Basics$composeL, $mdgriffith$elm_ui$Internal$Model$Attr, $elm$html$Html$Attributes$tabindex);
 var $mdgriffith$elm_ui$Element$Input$checkbox = F2(
 	function (attrs, _v0) {
@@ -20479,17 +20686,13 @@ var $author$project$Entrance$viewPasswordField = F2(
 					$author$project$Entrance$viewShowPassword(show))
 				]),
 			{
-				label: A2(
-					$mdgriffith$elm_ui$Element$Input$labelAbove,
-					_List_fromArray(
-						[$mdgriffith$elm_ui$Element$centerY, $mdgriffith$elm_ui$Element$Font$semiBold]),
-					$mdgriffith$elm_ui$Element$text('password')),
+				label: $mdgriffith$elm_ui$Element$Input$labelHidden('password'),
 				onChange: $author$project$Entrance$ChangePassword,
 				placeholder: $elm$core$Maybe$Just(
 					A2(
 						$mdgriffith$elm_ui$Element$Input$placeholder,
 						_List_Nil,
-						$mdgriffith$elm_ui$Element$text('something secure'))),
+						$mdgriffith$elm_ui$Element$text('password'))),
 				show: show,
 				text: password
 			});
@@ -20513,8 +20716,8 @@ var $author$project$Entrance$viewForm = function (model) {
 					]),
 				_List_fromArray(
 					[
-						$author$project$Entrance$viewHeader('WTF Chat'),
-						$author$project$Entrance$viewEmailField(model.email),
+						$author$project$Layout$viewHeader('WTF Chat'),
+						A2($author$project$Layout$viewEmailField, model.email, $author$project$Entrance$ChangeEmail),
 						A2($author$project$Entrance$viewPasswordField, model.password, model.showPassword),
 						$author$project$Entrance$viewEnterBtn
 					]))));
@@ -20545,14 +20748,15 @@ var $author$project$Main$view = function (model) {
 				title: 'ChatRoom - ' + title
 			};
 		});
-	if (model.$ === 'Guest') {
-		var entrance = model.a;
+	var _v0 = model.state;
+	if (_v0.$ === 'Guest') {
+		var entrance = _v0.a;
 		return A2(
 			viewPage,
 			$author$project$Entrance$view(entrance),
 			$author$project$Main$GotEntranceMsg);
 	} else {
-		var chatRoom = model.a;
+		var chatRoom = _v0.a;
 		return A2(
 			viewPage,
 			$author$project$ChatRoom$view(chatRoom),
@@ -20563,4 +20767,4 @@ var $author$project$Main$main = A2(
 	$author$project$Api$document,
 	$author$project$Viewer$decoder,
 	{init: $author$project$Main$init, subscriptions: $author$project$Main$subscriptions, update: $author$project$Main$update, view: $author$project$Main$view});
-_Platform_export({'Main':{'init':$author$project$Main$main($elm$json$Json$Decode$value)({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{"User.User":{"args":[],"type":"{ email : String.String, userName : Maybe.Maybe String.String }"},"Message.ConfirmedMsg":{"args":[],"type":"{ id : String.String, sender : User.User, body : String.String, timeStamp : Time.Posix }"},"Chat.GroupChatRecord":{"args":[],"type":"{ id : String.String, name : Maybe.Maybe String.String, members : List.List User.User, messages : List.List Message.Message, pendingMsg : String.String }"},"Message.PendingMsg":{"args":[],"type":"{ sender : User.User, body : String.String, timeStamp : Time.Posix }"},"Chat.PersonalChatRecord":{"args":[],"type":"{ id : String.String, recipient : User.User, messages : List.List Message.Message, pendingMsg : String.String }"},"Json.Decode.Value":{"args":[],"type":"Json.Encode.Value"}},"unions":{"Main.Msg":{"args":[],"tags":{"GotEntranceMsg":["Entrance.Msg"],"GotChatRoomMsg":["ChatRoom.Msg"],"GotViewer":["Maybe.Maybe Viewer.Viewer"]}},"Maybe.Maybe":{"args":["a"],"tags":{"Just":["a"],"Nothing":[]}},"ChatRoom.Msg":{"args":[],"tags":{"NoOp":[],"SendMessage":[],"Exit":[],"SelectChat":["Chat.Chat"],"ChangText":["String.String"],"GotChats":["Result.Result Http.Error (List.List Chat.Chat)"],"GotMessageResponse":["Result.Result Http.Error ( String.String, Message.Message, Message.Message )"],"GotNewMessage":["Result.Result Json.Decode.Error ( String.String, Message.Message )"],"GotExitResponse":["Result.Result Http.Error Basics.Bool"]}},"Entrance.Msg":{"args":[],"tags":{"NoOp":[],"Enter":[],"ChangeEmail":["String.String"],"ChangePassword":["String.String"],"ToggleShowPassword":["Basics.Bool"],"ToggleRememberMe":["Basics.Bool"],"GotResponse":["Result.Result Http.Error (Maybe.Maybe Viewer.Viewer)"]}},"Viewer.Viewer":{"args":[],"tags":{"Viewer":["User.User","Api.Cred"]}},"Basics.Bool":{"args":[],"tags":{"True":[],"False":[]}},"Chat.Chat":{"args":[],"tags":{"PersonalChat":["Chat.PersonalChatRecord"],"GroupChat":["Chat.GroupChatRecord"]}},"Api.Cred":{"args":[],"tags":{"Cred":["Api.RefreshToken","Api.AccessToken"]}},"Http.Error":{"args":[],"tags":{"BadUrl":["String.String"],"Timeout":[],"NetworkError":[],"BadStatus":["Basics.Int"],"BadBody":["String.String"]}},"Json.Decode.Error":{"args":[],"tags":{"Field":["String.String","Json.Decode.Error"],"Index":["Basics.Int","Json.Decode.Error"],"OneOf":["List.List Json.Decode.Error"],"Failure":["String.String","Json.Decode.Value"]}},"List.List":{"args":["a"],"tags":{}},"Message.Message":{"args":[],"tags":{"Confirmed":["Message.ConfirmedMsg"],"Pending":["Message.PendingMsg"]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}},"Api.AccessToken":{"args":[],"tags":{"AccessToken":["Maybe.Maybe String.String","Basics.Int"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"Time.Posix":{"args":[],"tags":{"Posix":["Basics.Int"]}},"Api.RefreshToken":{"args":[],"tags":{"RefreshToken":["String.String","Basics.Int"]}},"Json.Encode.Value":{"args":[],"tags":{"Value":[]}}}}})}});}(this));
+_Platform_export({'Main':{'init':$author$project$Main$main($elm$json$Json$Decode$value)({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{"User.User":{"args":[],"type":"{ email : String.String, userName : Maybe.Maybe String.String }"},"Message.ConfirmedMsg":{"args":[],"type":"{ id : String.String, sender : User.User, body : String.String, timeStamp : Time.Posix }"},"Chat.GroupChatRecord":{"args":[],"type":"{ id : String.String, name : Maybe.Maybe String.String, members : List.List User.User, messages : List.List Message.Message, pendingMsg : String.String }"},"Message.PendingMsg":{"args":[],"type":"{ sender : User.User, body : String.String, timeStamp : Time.Posix }"},"Chat.PersonalChatRecord":{"args":[],"type":"{ id : String.String, recipient : User.User, messages : List.List Message.Message, pendingMsg : String.String }"},"Json.Decode.Value":{"args":[],"type":"Json.Encode.Value"}},"unions":{"Main.Msg":{"args":[],"tags":{"GotEntranceMsg":["Entrance.Msg"],"GotChatRoomMsg":["ChatRoom.Msg"],"GotViewer":["Maybe.Maybe Viewer.Viewer"]}},"Maybe.Maybe":{"args":["a"],"tags":{"Just":["a"],"Nothing":[]}},"ChatRoom.Msg":{"args":[],"tags":{"NoOp":[],"Exit":[],"SendMessage":[],"AddChat":[],"SelectChat":["Chat.Chat"],"ChangText":["String.String"],"ChangeEmail":["String.String"],"ToggleDialogBox":["Maybe.Maybe ChatRoom.DialogBox"],"GotChats":["Result.Result Http.Error (List.List Chat.Chat)"],"GotMessageResponse":["Result.Result Http.Error ( String.String, Message.Message, Message.Message )"],"GotNewMessage":["Result.Result Json.Decode.Error ( String.String, Message.Message )"],"GotExitResponse":["Result.Result Http.Error Basics.Bool"],"GotNewChat":["Result.Result Http.Error Chat.Chat"]}},"Entrance.Msg":{"args":[],"tags":{"NoOp":[],"Enter":[],"ChangeEmail":["String.String"],"ChangePassword":["String.String"],"ToggleShowPassword":["Basics.Bool"],"ToggleRememberMe":["Basics.Bool"],"GotResponse":["Result.Result Http.Error (Maybe.Maybe Viewer.Viewer)"]}},"Viewer.Viewer":{"args":[],"tags":{"Viewer":["User.User","Api.Cred"]}},"Basics.Bool":{"args":[],"tags":{"True":[],"False":[]}},"Chat.Chat":{"args":[],"tags":{"PersonalChat":["Chat.PersonalChatRecord"],"GroupChat":["Chat.GroupChatRecord"]}},"Api.Cred":{"args":[],"tags":{"Cred":["Api.RefreshToken","Api.AccessToken"]}},"ChatRoom.DialogBox":{"args":[],"tags":{"NewContact":["String.String"]}},"Http.Error":{"args":[],"tags":{"BadUrl":["String.String"],"Timeout":[],"NetworkError":[],"BadStatus":["Basics.Int"],"BadBody":["String.String"]}},"Json.Decode.Error":{"args":[],"tags":{"Field":["String.String","Json.Decode.Error"],"Index":["Basics.Int","Json.Decode.Error"],"OneOf":["List.List Json.Decode.Error"],"Failure":["String.String","Json.Decode.Value"]}},"List.List":{"args":["a"],"tags":{}},"Message.Message":{"args":[],"tags":{"Confirmed":["Message.ConfirmedMsg"],"Pending":["Message.PendingMsg"]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}},"Api.AccessToken":{"args":[],"tags":{"AccessToken":["Maybe.Maybe String.String","Basics.Int"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"Time.Posix":{"args":[],"tags":{"Posix":["Basics.Int"]}},"Api.RefreshToken":{"args":[],"tags":{"RefreshToken":["String.String","Basics.Int"]}},"Json.Encode.Value":{"args":[],"tags":{"Value":[]}}}}})}});}(this));

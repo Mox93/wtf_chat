@@ -48,7 +48,7 @@ const configKey = "config";
 var storage;
 var socket;
 
-var flags = localStorage.getItem(storageKey);
+var flags = {"url": url, "viewer": localStorage.getItem(storageKey)};  // localStorage.getItem(storageKey);
 var app = Elm.Main.init({flags: flags});
 
 app.ports.storeCache.subscribe(function(val) {
