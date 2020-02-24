@@ -13,8 +13,8 @@ class Chat(Document):
 
 
 class PersonalChat(Chat):
-    user_1 = db.ReferenceField(User, required=True, reverse_delete_rule=1)
-    user_2 = db.ReferenceField(User, required=True, reverse_delete_rule=1)
+    user_1 = db.ReferenceField(User, required=True, reverse_delete_rule=0)
+    user_2 = db.ReferenceField(User, required=True, reverse_delete_rule=0)
 
     @property
     def members(self):
@@ -32,7 +32,7 @@ class PersonalChat(Chat):
 
 
 class GroupChat(Chat):
-    members = db.ListField(db.ReferenceField(User, required=True, reverse_delete_rule=1), required=True)
+    members = db.ListField(db.ReferenceField(User, required=True, reverse_delete_rule=0), required=True)
     name = db.StringField()
 
     @classmethod

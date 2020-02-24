@@ -4,7 +4,7 @@ from flask_mongoengine import Document
 
 class PendingMsg(db.EmbeddedDocument):
     _id = db.ObjectIdField(required=True)
-    sender = db.ReferenceField("User", required=True)
+    sender = db.ReferenceField("User", required=True, reverse_delete_rule=0)
     chat_id = db.ObjectIdField(required=True)
     body = db.StringField(required=True)
     time_stamp = db.DateTimeField(required=True)

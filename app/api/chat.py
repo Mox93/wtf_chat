@@ -1,7 +1,7 @@
 from flask import jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from . import api
-from app.models.chat import PersonalChat, GroupChat
+from app.models.chat import Chat, PersonalChat, GroupChat
 from app.models.user import User
 
 
@@ -58,7 +58,7 @@ def new_chat():
                     chat.save()
 
                 response = {"data": {
-                    "chat_id": str(chat.id), "recipient": {"email": recipient.email, "user_name": recipient.user_name}
+                    "_id": str(chat.id), "recipient": {"email": recipient.email, "user_name": recipient.user_name}
                 }}
             else:
                 response = {"error": "couldn't find the user you're trying to add."}
@@ -82,3 +82,14 @@ def new_chat():
         response = {"error": "couldn't find your account."}
 
     return jsonify(response)
+
+
+@api.route("leave-chat", methods=["DELETE"])
+@jwt_required
+def leave_chat():
+    data = request.get_json()
+    current_user = get_jwt_identity()
+
+    chat = Chat.find_by_id(data["chat_id"])
+    if chat:
+        pass

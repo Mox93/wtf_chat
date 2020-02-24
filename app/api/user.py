@@ -70,9 +70,9 @@ def add_contact():
     return jsonify(response)
 
 
-@api.route("/remove-contact", methods=["DELETE"])
+@api.route("/delete-contact", methods=["DELETE"])
 @jwt_required
-def remove_contact():
+def delete_contact():
     data = request.get_json()
     current_user = get_jwt_identity()
 
